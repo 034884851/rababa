@@ -1,0 +1,3682 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>拉耙耙 (La-Pa-Pa) - 肉鴿牌庫拉霸地牢冒險</title>
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --panel-bg: rgba(18, 22, 34, 0.96);
+            --gold: #f5b324;
+            --gold-bright: #ffea79;
+            --gold-glow: rgba(245, 179, 36, 0.45);
+            --hp-red: #e74c3c;
+            --armor-blue: #3498db;
+            --mp-purple: #9b59b6;
+            --exp-green: #2ecc71;
+            --text-main: #f0f4f8;
+            --text-muted: #8b9bb4;
+            --slot-frame: #2d1808;
+            --slot-gold: #e67e22;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "PingFang TC", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 15%, rgba(35, 45, 80, 0.7) 0%, rgba(7, 9, 14, 0.98) 75%),
+                linear-gradient(rgba(245, 179, 36, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 179, 36, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 28px 28px, 28px 28px;
+        }
+
+        #game-frame {
+            width: 100vw;
+            max-width: 1140px;
+            height: 97vh;
+            max-height: 870px;
+            background: var(--panel-bg);
+            border: 3px solid var(--gold);
+            border-radius: 16px;
+            box-shadow: 0 0 45px rgba(0, 0, 0, 0.9), 0 0 30px var(--gold-glow);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* CRT Scanline Overlay */
+        .crt-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 99;
+            opacity: 0.32;
+        }
+
+        /* Top HUD Header */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: linear-gradient(180deg, rgba(32, 38, 60, 0.98) 0%, rgba(14, 18, 28, 0.98) 100%);
+            border-bottom: 2px solid #3c4765;
+            font-size: 0.92rem;
+            z-index: 10;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+        }
+
+        .hud-stat-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hud-hero-avatar-box {
+            width: 42px;
+            height: 42px;
+            background: #101422;
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.8);
+            cursor: pointer;
+        }
+
+        .hud-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(245, 179, 36, 0.35);
+            font-weight: 700;
+            font-size: 0.88rem;
+        }
+
+        .badge-gold { color: var(--gold-bright); border-color: var(--gold); }
+        .badge-floor { color: #68d391; border-color: #38a169; }
+        .badge-combo { color: #f6ad55; border-color: #dd6b20; }
+
+        /* Bars */
+        .bar-wrap {
+            display: flex;
+            flex-direction: column;
+            width: 130px;
+        }
+        .bar-label {
+            font-size: 0.72rem;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        .bar-track {
+            height: 10px;
+            background: #0d101a;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid #333d54;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            transition: width 0.2s ease;
+        }
+        .hp-fill { background: linear-gradient(90deg, #b02a1d, #e74c3c); }
+        .armor-fill { background: linear-gradient(90deg, #2471a3, #3498db); }
+        .sp-fill { background: linear-gradient(90deg, #7d3c98, #af7ac5); }
+
+        .btn-hud-icon {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid #4a5675;
+            color: var(--text-main);
+            padding: 5px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .btn-hud-icon:hover {
+            border-color: var(--gold);
+            background: rgba(245, 179, 36, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Game Body Layout */
+        .game-body {
+            display: flex;
+            flex: 1;
+            padding: 10px;
+            gap: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Dungeon Container */
+        .dungeon-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #151a27 0%, #080a11 90%);
+            border-radius: 12px;
+            border: 2px solid #2d374f;
+            box-shadow: inset 0 0 35px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        #dungeon-canvas {
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.95);
+            cursor: pointer;
+            touch-action: none;
+            background: #090c13;
+        }
+
+        /* Right Dashboard */
+        .dashboard-side {
+            width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+
+        /* Arcade Mechanical Slot Machine Cabinet */
+        .slot-cabinet {
+            background: linear-gradient(170deg, #381a07 0%, #1c0e05 40%, #130a04 100%);
+            border: 3px solid var(--gold);
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.8), inset 0 0 16px rgba(245, 179, 36, 0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Marquee Chaser Lights */
+        .marquee-border {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 6px;
+        }
+        .chaser-bulb {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #444;
+            box-shadow: 0 0 3px #000;
+            transition: background 0.1s, box-shadow 0.1s;
+        }
+        .chaser-bulb.on-gold { background: #ffd700; box-shadow: 0 0 8px #ffd700; }
+        .chaser-bulb.on-red { background: #ff3333; box-shadow: 0 0 8px #ff3333; }
+        .chaser-bulb.on-blue { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+        .chaser-bulb.on-green { background: #00ff66; box-shadow: 0 0 8px #00ff66; }
+
+        .slot-marquee-header {
+            font-size: 0.98rem;
+            font-weight: 900;
+            color: var(--gold-bright);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--gold-glow);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Slot Window + Lever Flex */
+        .slot-interactive-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .slot-window {
+            display: flex;
+            gap: 8px;
+            background: #08090d;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 3px solid #634316;
+            box-shadow: inset 0 0 16px rgba(0,0,0,0.95);
+        }
+
+        .slot-reel {
+            width: 72px;
+            height: 76px;
+            background: radial-gradient(circle, #252c3d 0%, #121622 100%);
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.85);
+            transition: transform 0.1s ease;
+        }
+
+        .slot-reel canvas {
+            display: block;
+            pointer-events: none;
+        }
+
+        /* Mechanical Lever */
+        .lever-assembly {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            width: 38px;
+            height: 90px;
+            padding-top: 5px;
+        }
+
+        .lever-knob {
+            width: 26px;
+            height: 26px;
+            background: radial-gradient(circle at 35% 35%, #ff6b6b 0%, #c0392b 60%, #781e14 100%);
+            border-radius: 50%;
+            border: 2px solid #ffd875;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.8), 0 0 10px rgba(231, 76, 60, 0.6);
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2;
+        }
+
+        .lever-shaft {
+            width: 6px;
+            height: 52px;
+            background: linear-gradient(90deg, #ccc 0%, #fff 50%, #888 100%);
+            border-radius: 3px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+            margin-top: -6px;
+            transform-origin: bottom center;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .lever-base {
+            width: 32px;
+            height: 18px;
+            background: linear-gradient(180deg, #5c3814 0%, #261605 100%);
+            border: 2px solid var(--gold);
+            border-radius: 4px;
+            box-shadow: inset 0 0 4px #000;
+            margin-top: -4px;
+        }
+
+        .lever-assembly.pulled .lever-knob {
+            transform: translateY(38px) scale(0.92);
+        }
+        .lever-assembly.pulled .lever-shaft {
+            transform: scaleY(0.4) rotate(15deg);
+        }
+
+        /* Slot Controls */
+        .slot-controls {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-gold {
+            background: linear-gradient(180deg, #f5b324 0%, #bd7b0a 100%);
+            color: #120b02;
+            border: 2px solid #ffd875;
+            padding: 8px 12px;
+            font-weight: 900;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            flex: 1;
+            font-size: 0.92rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-gold:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.15);
+            box-shadow: 0 6px 16px rgba(245, 179, 36, 0.45);
+        }
+        .btn-gold:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+        .btn-gold:disabled {
+            filter: grayscale(0.8);
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-skill {
+            background: linear-gradient(180deg, #9b59b6 0%, #6c3483 100%);
+            color: #fff;
+            border: 2px solid #d2b4de;
+        }
+        .btn-skill:hover:not(:disabled) {
+            box-shadow: 0 6px 16px rgba(155, 89, 182, 0.5);
+        }
+
+        /* Character Card Panel */
+        .char-card {
+            background: rgba(18, 23, 36, 0.9);
+            border: 1.5px solid #2d3852;
+            border-radius: 10px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.86rem;
+        }
+        .char-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2e3a55;
+            padding-bottom: 3px;
+        }
+        .char-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 2px;
+        }
+        .stat-item {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid #2b354d;
+            border-radius: 6px;
+            padding: 3px 6px;
+            text-align: center;
+        }
+        .stat-item span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: block;
+        }
+        .stat-item b {
+            font-size: 0.95rem;
+            color: var(--gold-bright);
+        }
+
+        /* Relic Shelf */
+        .relic-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .relic-shelf {
+            display: flex;
+            gap: 6px;
+            min-height: 38px;
+            background: rgba(0,0,0,0.35);
+            border: 1px dashed #3a4768;
+            border-radius: 6px;
+            padding: 4px 8px;
+            align-items: center;
+            overflow-x: auto;
+        }
+        .relic-icon-slot {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: #1b2234;
+            border: 1.5px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(245, 179, 36, 0.3);
+            flex-shrink: 0;
+        }
+
+        /* Action Log */
+        .log-box {
+            flex: 1;
+            min-height: 80px;
+            max-height: 130px;
+            background: #090b12;
+            border: 1.5px solid #28324a;
+            border-radius: 8px;
+            padding: 6px 10px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.78rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.85);
+        }
+        .log-entry { line-height: 1.35; word-break: break-all; }
+        .log-info { color: #a0aec0; }
+        .log-good { color: #48bb78; font-weight: bold; }
+        .log-bad { color: #f56565; }
+        .log-jackpot { color: #ffd700; font-weight: bold; text-shadow: 0 0 6px rgba(255,215,0,0.5); }
+
+        /* Touch Pad */
+        .touch-pad {
+            display: none;
+            grid-template-columns: repeat(3, 44px);
+            grid-template-rows: repeat(3, 38px);
+            gap: 4px;
+            justify-content: center;
+            margin-top: 4px;
+        }
+        .pad-btn {
+            background: #1a2236;
+            border: 1.5px solid #3c4c70;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .pad-btn:active { background: var(--gold); color: #000; }
+
+        /* Modals */
+        .modal-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(4, 6, 10, 0.88);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 16px;
+        }
+        .modal-screen.active { display: flex; }
+
+        .modal-content {
+            background: linear-gradient(180deg, #1d2338 0%, #0f1322 100%);
+            border: 3px solid var(--gold);
+            border-radius: 16px;
+            padding: 22px 30px;
+            max-width: 680px;
+            width: 100%;
+            box-shadow: 0 0 40px rgba(0,0,0,0.95), 0 0 25px var(--gold-glow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            text-align: center;
+            max-height: 92vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-title {
+            font-size: 1.85rem;
+            color: var(--gold-bright);
+            font-weight: 900;
+            text-shadow: 0 0 14px rgba(245, 179, 36, 0.6);
+            letter-spacing: 1px;
+        }
+
+        /* Hero Picker Cards */
+        .hero-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            margin-top: 6px;
+        }
+        .hero-card {
+            background: rgba(13, 17, 28, 0.95);
+            border: 2px solid #334262;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            text-align: center;
+        }
+        .hero-card:hover {
+            border-color: var(--gold);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+        }
+        .hero-card.selected {
+            border-color: var(--gold);
+            background: rgba(56, 41, 15, 0.7);
+            box-shadow: 0 0 18px var(--gold-glow);
+        }
+        .hero-avatar-canvas {
+            width: 60px;
+            height: 60px;
+            background: #090c14;
+            border-radius: 8px;
+            border: 1.5px solid #4a5675;
+        }
+        .hero-name {
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: var(--gold-bright);
+        }
+        .hero-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        /* 3-Choice Reward Cards */
+        .reward-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin: 8px 0;
+        }
+        .reward-card {
+            background: #141a2c;
+            border: 2px solid #3d4a6c;
+            border-radius: 10px;
+            padding: 14px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+        .reward-card:hover {
+            border-color: var(--gold);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px var(--gold-glow);
+        }
+        .reward-icon-canvas {
+            width: 52px;
+            height: 52px;
+            background: #0a0d16;
+            border-radius: 8px;
+            border: 1px solid #4c5a7d;
+        }
+        .reward-title {
+            font-weight: 800;
+            color: var(--gold-bright);
+            font-size: 0.95rem;
+        }
+        .reward-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        /* Jackpot Celebration Overlay */
+        #jackpot-celebration {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 95;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #jackpot-celebration.show { display: flex; }
+
+        #jackpot-banner {
+            background: linear-gradient(135deg, rgba(245, 179, 36, 0.98), rgba(217, 83, 79, 0.98));
+            border: 4px solid #fff;
+            color: #fff;
+            padding: 16px 36px;
+            border-radius: 16px;
+            font-size: 2.1rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 3px 8px #000;
+            box-shadow: 0 0 60px rgba(255, 234, 121, 0.95);
+            animation: jackpotPulse 0.4s infinite alternate ease-in-out;
+        }
+        @keyframes jackpotPulse {
+            from { transform: scale(0.95); }
+            to { transform: scale(1.06); }
+        }
+
+        #coin-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* Deck View / Shop Items */
+        .deck-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-height: 280px;
+            overflow-y: auto;
+            width: 100%;
+            padding: 8px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 8px;
+        }
+        .deck-pill {
+            background: #171e2e;
+            border: 1px solid #3c4a6b;
+            padding: 5px 12px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin: 8px 0;
+        }
+        .shop-item-card {
+            background: #151b2c;
+            border: 2px solid #3b4969;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s ease;
+        }
+        .shop-item-card:hover:not(.disabled) {
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+        .shop-item-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            #game-frame { height: 100vh; max-height: none; border-radius: 0; border: none; }
+            .game-body { flex-direction: column; padding: 6px; gap: 6px; }
+            .dashboard-side { width: 100%; }
+            .touch-pad { display: grid; }
+            .hero-picker-grid { grid-template-columns: 1fr; }
+            .reward-grid { grid-template-columns: 1fr; }
+            .shop-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-frame">
+    <div class="crt-overlay"></div>
+
+    <!-- Top HUD Header -->
+    <header class="hud-header">
+        <div class="hud-stat-group">
+            <div class="hud-hero-avatar-box" id="hud-hero-avatar-box" title="查看角色資訊">
+                <canvas id="hud-avatar-canvas" width="36" height="36"></canvas>
+            </div>
+            <div>
+                <b id="hud-hero-name" style="color:var(--gold-bright);">鐵壁戰士</b>
+                <div style="font-size:0.75rem; color:var(--text-muted);" id="hud-hero-lv">Lv.1</div>
+            </div>
+        </div>
+
+        <div class="hud-stat-group">
+            <div class="bar-wrap">
+                <div class="bar-label"><span>HP</span><span id="hp-text">130/130</span></div>
+                <div class="bar-track"><div id="hp-bar" class="bar-fill hp-fill" style="width:100%;"></div></div>
+            </div>
+            <div class="bar-wrap">
+                <div class="bar-label"><span>ARMOR</span><span id="armor-text">6</span></div>
+                <div class="bar-track"><div id="armor-bar" class="bar-fill armor-fill" style="width:30%;"></div></div>
+            </div>
+        </div>
+
+        <div class="hud-stat-group">
+            <div class="hud-badge badge-gold">💰 <span id="gold-text">0</span></div>
+            <div class="hud-badge badge-floor">🏰 <span id="floor-text">第 1/10 層</span></div>
+            <div class="hud-badge badge-combo">🔥 <span id="combo-text">x0 Combo</span></div>
+        </div>
+
+        <div class="hud-stat-group">
+            <button class="btn-hud-icon" id="btn-toggle-bgm" title="切換背景音樂">🎵 BGM</button>
+            <button class="btn-hud-icon" id="btn-toggle-sfx" title="切換音效">🔊 音效</button>
+            <button class="btn-hud-icon" id="btn-open-deck" title="查看符號牌庫">🎴 牌庫</button>
+            <button class="btn-hud-icon" id="btn-open-rules" title="遊戲指南">❓ 說明</button>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <div class="game-body">
+        <!-- Dungeon Grid Canvas -->
+        <main class="dungeon-container">
+            <canvas id="dungeon-canvas" width="560" height="560"></canvas>
+        </main>
+
+        <!-- Right Side: Arcade Mechanical Slot Machine & Player Stats -->
+        <aside class="dashboard-side">
+            <!-- Retro Mechanical Slot Machine Cabinet -->
+            <div class="slot-cabinet">
+                <!-- Chaser Lights Row -->
+                <div class="marquee-border" id="marquee-lights">
+                    <div class="chaser-bulb"></div><div class="chaser-bulb"></div>
+                    <div class="chaser-bulb"></div><div class="chaser-bulb"></div>
+                    <div class="chaser-bulb"></div><div class="chaser-bulb"></div>
+                    <div class="chaser-bulb"></div><div class="chaser-bulb"></div>
+                </div>
+
+                <div class="slot-marquee-header">
+                    <span>★</span> 拉耙耙 JACKPOT 777 <span>★</span>
+                </div>
+
+                <!-- 3 Mechanical Reels + Lever Row -->
+                <div class="slot-interactive-row">
+                    <div class="slot-window">
+                        <div class="slot-reel" id="reel-box-0">
+                            <canvas id="reel-canvas-0" width="68" height="72"></canvas>
+                        </div>
+                        <div class="slot-reel" id="reel-box-1">
+                            <canvas id="reel-canvas-1" width="68" height="72"></canvas>
+                        </div>
+                        <div class="slot-reel" id="reel-box-2">
+                            <canvas id="reel-canvas-2" width="68" height="72"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Physical 3D Lever -->
+                    <div class="lever-assembly" id="slot-lever" title="拉下搖桿啟動拉霸！">
+                        <div class="lever-knob"></div>
+                        <div class="lever-shaft"></div>
+                        <div class="lever-base"></div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="slot-controls">
+                    <button class="btn-gold" id="btn-spin-room" title="花費 25 金幣拉動把手進行幸運拉霸！">
+                        🎰 幸運拉霸 (25G)
+                    </button>
+                    <button class="btn-gold btn-skill" id="btn-skill-cast" disabled>
+                        ⚡ 職業奧義 (SP)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Player Attributes Panel -->
+            <div class="char-card">
+                <div class="char-card-header">
+                    <b id="card-hero-title" style="color:var(--gold-bright);">鐵壁戰士 (狂食之盾)</b>
+                    <span id="sp-indicator" style="font-weight:bold; color:#bb8fce;">SP: 10/10</span>
+                </div>
+                <div class="char-stats-grid">
+                    <div class="stat-item"><span>力量 (STR)</span><b id="stat-str">14</b></div>
+                    <div class="stat-item"><span>智力 (INT)</span><b id="stat-int">4</b></div>
+                    <div class="stat-item"><span>護甲 (ARM)</span><b id="stat-arm">6</b></div>
+                    <div class="stat-item"><span>幸運 (LUK)</span><b id="stat-luk">5</b></div>
+                    <div class="stat-item"><span>暴擊率 (CRIT)</span><b id="stat-crit">12%</b></div>
+                    <div class="stat-item"><span>飽食狀態</span><b id="stat-food" style="color:#2ecc71;">正常</b></div>
+                </div>
+
+                <div class="relic-section" style="margin-top:2px;">
+                    <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+                        <span>擁有遺物 (Relics)：</span>
+                        <span id="merchant-notice" style="color:var(--gold-bright); cursor:pointer;">[🛒 呼叫行商]</span>
+                    </div>
+                    <div class="relic-shelf" id="relic-shelf">
+                        <!-- Relic slots dynamically rendered -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Virtual D-Pad for Mobile -->
+            <div class="touch-pad">
+                <div></div>
+                <button class="pad-btn" id="touch-up">▲</button>
+                <div></div>
+                <button class="pad-btn" id="touch-left">◀</button>
+                <button class="pad-btn" id="touch-center">●</button>
+                <button class="pad-btn" id="touch-right">▶</button>
+                <div></div>
+                <button class="pad-btn" id="touch-down">▼</button>
+                <div></div>
+            </div>
+
+            <!-- Action Combat Log -->
+            <div class="log-box" id="log-box">
+                <div class="log-entry log-jackpot">> ★ 歡迎來到《拉耙耙》(La-Pa-Pa)！</div>
+                <div class="log-entry log-info">> 每一層地牢皆由拉霸機轉出，拉動把手踏上肉鴿征途！</div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JACKPOT CELEBRATION OVERLAY -->
+    <div id="jackpot-celebration">
+        <canvas id="coin-canvas"></canvas>
+        <div id="jackpot-banner">🎰 777 SUPER JACKPOT! 🎰</div>
+    </div>
+
+    <!-- MODAL 1: Character Select / Start -->
+    <div id="modal-start" class="modal-screen active">
+        <div class="modal-content">
+            <h1 class="modal-title">🏰 拉 耙 耙 🏰</h1>
+            <p style="color:var(--gold-bright); font-size:1.05rem; font-weight:bold;">肉鴿牌庫構建 × 機械拉霸地牢冒險</p>
+            <p style="color:var(--text-muted); font-size:0.86rem; line-height:1.4;">
+                拉動實體搖桿轉動命運齒輪，以 7x7 走格子戰鬥深入 10 層地牢，斬殺巨蛙大亨與暗黑魔龍！
+            </p>
+
+            <div class="hero-picker-grid">
+                <!-- 1. Warrior -->
+                <div class="hero-card selected" data-class="warrior">
+                    <canvas class="hero-avatar-canvas" id="preview-warrior" width="60" height="60"></canvas>
+                    <div class="hero-name">鐵壁戰士</div>
+                    <div class="hero-desc"><b>初始金幣：50G</b> | HP: 130 | STR: 14 | ARM: 6<br>特有「飽腹機制」，吃披薩大幅提振傷害<br><b>奧義：【破陣十字斬】</b>破甲十字群攻</div>
+                </div>
+
+                <!-- 2. Mage -->
+                <div class="hero-card" data-class="mage">
+                    <canvas class="hero-avatar-canvas" id="preview-mage" width="60" height="60"></canvas>
+                    <div class="hero-name">奧術法師</div>
+                    <div class="hero-desc"><b>初始金幣：50G</b> | HP: 85 | INT: 18 | ARM: 2<br>魔導符號共鳴，奧術卷軸能量翻倍<br><b>奧義：【極光連鎖】</b>全場貫穿雷擊3體</div>
+                </div>
+
+                <!-- 3. Gambler -->
+                <div class="hero-card" data-class="gambler">
+                    <canvas class="hero-avatar-canvas" id="preview-gambler" width="60" height="60"></canvas>
+                    <div class="hero-name">千面賭徒</div>
+                    <div class="hero-desc"><b>初始金幣：80G (富豪起步)</b> | HP: 95 | LUK: 22<br>777/鈴鐺中獎率極高，拾取金幣雙倍<br><b>奧義：【天命重骰】</b>怪物強制化為金幣寶箱</div>
+                </div>
+
+                <!-- 4. Sinner -->
+                <div class="hero-card" data-class="sinner">
+                    <canvas class="hero-avatar-canvas" id="preview-sinner" width="60" height="60"></canvas>
+                    <div class="hero-name">放逐罪人</div>
+                    <div class="hero-desc"><b>初始金幣：50G</b> | HP: 75 | STR: 15 | LUK: 14<br>0 護甲自殘狂化流，殘血攻擊力狂飆<br><b>奧義：【苦痛盛宴】</b>消耗HP引爆劇毒血爆</div>
+                </div>
+            </div>
+
+            <button id="btn-confirm-start" class="btn-gold" style="font-size:1.15rem; padding:12px 45px; margin-top:8px;">
+                🚀 選擇職業並踏入地牢
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: 3-Choice Reward (Floor Cleared) -->
+    <div id="modal-reward" class="modal-screen">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color:#68d391;">🏆 樓層突破！挑選過關獎勵</h2>
+            <p style="color:var(--text-muted); font-size:0.86rem;">
+                挑選強效新符號加入拉霸牌庫、提純牌庫以大幅提高大獎機率，或獲取傳奇遺物！
+            </p>
+            
+            <div class="reward-grid" id="reward-choices">
+                <!-- 3 dynamic reward cards -->
+            </div>
+
+            <button id="btn-skip-reward" class="btn-gold" style="background:#4a5568; color:#fff; flex:none;">
+                放棄並前往下一層 ⏭
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Wandering Merchant Shop -->
+    <div id="modal-shop" class="modal-screen">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color:var(--gold-bright);">🛒 流浪行商的黑市營地</h2>
+            <p style="color:var(--text-muted); font-size:0.86rem;">「只要金幣夠多，命運與牌庫任你改寫...」</p>
+            
+            <div class="shop-grid" id="shop-items-container">
+                <!-- Merchant items -->
+            </div>
+
+            <button id="btn-close-shop" class="btn-gold" style="flex:none; padding:8px 36px;">離開商隊</button>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Deck View & Purge Modal -->
+    <div id="modal-deck" class="modal-screen">
+        <div class="modal-content">
+            <h2 class="modal-title">🎴 當前符號牌庫 (Symbol Deck)</h2>
+            <p style="color:var(--text-muted); font-size:0.85rem;">
+                拉霸機每次旋轉皆從此牌庫抽取符號降落至地牢格子中。可於流浪商人處進行「牌庫提純」移除弱小雜質！
+            </p>
+            
+            <div class="deck-list" id="deck-display-list">
+                <!-- Deck elements -->
+            </div>
+
+            <button id="btn-close-deck" class="btn-gold" style="flex:none; padding:8px 36px;">關閉牌庫</button>
+        </div>
+    </div>
+
+    <!-- MODAL 5: Rules & Help -->
+    <div id="modal-rules" class="modal-screen">
+        <div class="modal-content" style="text-align:left;">
+            <h2 class="modal-title" style="text-align:center;">📖 《拉耙耙》遊戲玩法指南</h2>
+            <div style="font-size:0.85rem; color:var(--text-main); line-height:1.6; max-height:360px; overflow-y:auto; padding-right:8px;">
+                <p><b>一、核心玩法循環：</b></p>
+                <p>1. <b>拉霸生成</b>：進入每一層時拉霸機啟動旋轉，從你的牌庫中隨機轉出符號並降落至 7×7 地牢。</p>
+                <p>2. <b>連線大獎 (Jackpot)</b>：</p>
+                <ul style="padding-left:20px; margin:4px 0;">
+                    <li><b>777 SUPER JACKPOT</b>：全場神聖雷擊消滅全體怪物 + HP 回滿 + 100 金幣！</li>
+                    <li><b>3 鈴鐺 (Triple Bell)</b>：獲得 50 金幣，力量永久 +3！</li>
+                    <li><b>3 BAR (Triple Bar)</b>：獲得 35 點厚重護盾！</li>
+                    <li><b>3 奧義 (Triple Ougi)</b>：SP 能量全滿，力量 +2！</li>
+                </ul>
+                <p>3. <b>走格子探索與戰鬥</b>：使用 WASD 或方向鍵移動，撞擊怪物造成物理/暴擊傷害。拾取披薩回血並獲得「飽食增傷」，拾取藥水獲得永久屬性！</p>
+                <p>4. <b>樓梯突破與牌庫提純</b>：抵達樓梯進入過關 3 選 1，可挑選新符號加入牌庫、提純牌庫（刪除雜魚符號），或獲得傳奇遺物。</p>
+                <p>5. <b>通關目標</b>：突破 10 層地牢，迎戰第 5 層【賭場巨蛙大亨】與第 10 層終極魔王【遠古暗黑魔龍】！</p>
+            </div>
+            <button id="btn-close-rules" class="btn-gold" style="align-self:center; padding:8px 36px;">了解</button>
+        </div>
+    </div>
+
+    <!-- MODAL 6: Game Over / Victory -->
+    <div id="modal-end" class="modal-screen">
+        <div class="modal-content">
+            <h1 class="modal-title" id="end-status-title">GAME OVER</h1>
+            <p id="end-status-desc" style="font-size:1.05rem; color:var(--text-main);">你在地牢深處陣亡了...</p>
+            <div style="font-size:0.95rem; color:var(--gold-bright); margin:8px 0;" id="end-score-summary"></div>
+            <button id="btn-restart-game" class="btn-gold" style="padding:12px 42px; font-size:1.1rem;">
+                🔄 再次挑戰《拉耙耙》
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/**
+ * =========================================================================
+ * 《拉耙耙》(La-Pa-Pa) - Web Audio API 8-Bit Chiptune Synthesizer
+ * =========================================================================
+ */
+class ChiptuneAudioEngine {
+    constructor() {
+        this.ctx = null;
+        this.sfxMuted = false;
+        this.bgmMuted = false;
+        this.isPlayingBgm = false;
+        this.bgmTimer = null;
+        this.bgmStep = 0;
+
+        // 8-Bit Melodic Pattern for Dungeon BGM (A Minor Gothic Adventure Motif)
+        this.melodyNotes = [
+            220.00, 0, 261.63, 293.66, 329.63, 0, 293.66, 261.63, // A3, -, C4, D4, E4, -, D4, C4
+            246.94, 0, 261.63, 220.00, 196.00, 220.00, 246.94, 0, // B3, -, C4, A3, G3, A3, B3, -
+            220.00, 329.63, 440.00, 0, 392.00, 329.63, 293.66, 0, // A3, E4, A4, -, G4, E4, D4, -
+            261.63, 293.66, 329.63, 392.00, 329.63, 0, 220.00, 0  // C4, D4, E4, G4, E4, -, A3, -
+        ];
+        this.bassNotes = [
+            110.00, 110.00, 110.00, 110.00, 130.81, 130.81, 146.83, 146.83,
+            123.47, 123.47, 110.00, 110.00, 98.00, 98.00, 123.47, 123.47,
+            110.00, 110.00, 164.81, 164.81, 146.83, 146.83, 130.81, 130.81,
+            130.81, 146.83, 164.81, 196.00, 164.81, 164.81, 110.00, 110.00
+        ];
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    startBgm() {
+        if (this.isPlayingBgm) return;
+        this.init();
+        this.isPlayingBgm = true;
+        this.bgmStep = 0;
+        this.scheduleBgmLoop();
+    }
+
+    scheduleBgmLoop() {
+        if (!this.isPlayingBgm) return;
+        const stepDuration = 0.165; // ~180 BPM sixteenth notes
+        const now = this.ctx.currentTime;
+
+        if (!this.bgmMuted) {
+            const melFreq = this.melodyNotes[this.bgmStep % this.melodyNotes.length];
+            const bassFreq = this.bassNotes[this.bgmStep % this.bassNotes.length];
+
+            // 1. Lead Melody (Square wave)
+            if (melFreq > 0) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(melFreq, now);
+                gain.gain.setValueAtTime(0.045, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.9);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + stepDuration * 0.9);
+            }
+
+            // 2. Bassline (Triangle wave)
+            if (bassFreq > 0) {
+                const bOsc = this.ctx.createOscillator();
+                const bGain = this.ctx.createGain();
+                bOsc.type = 'triangle';
+                bOsc.frequency.setValueAtTime(bassFreq, now);
+                bGain.gain.setValueAtTime(0.065, now);
+                bGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.95);
+                bOsc.connect(bGain);
+                bGain.connect(this.ctx.destination);
+                bOsc.start(now);
+                bOsc.stop(now + stepDuration * 0.95);
+            }
+
+            // 3. Retro Percussion Beat (Noise Snare & Kick)
+            if (this.bgmStep % 4 === 2) {
+                this.playRetroNoise(now, 0.05, 0.035);
+            } else if (this.bgmStep % 4 === 0) {
+                const kOsc = this.ctx.createOscillator();
+                const kGain = this.ctx.createGain();
+                kOsc.type = 'sine';
+                kOsc.frequency.setValueAtTime(130, now);
+                kOsc.frequency.exponentialRampToValueAtTime(35, now + 0.08);
+                kGain.gain.setValueAtTime(0.08, now);
+                kGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                kOsc.connect(kGain);
+                kGain.connect(this.ctx.destination);
+                kOsc.start(now);
+                kOsc.stop(now + 0.08);
+            }
+        }
+
+        this.bgmStep = (this.bgmStep + 1) % this.melodyNotes.length;
+        this.bgmTimer = setTimeout(() => this.scheduleBgmLoop(), stepDuration * 1000);
+    }
+
+    playRetroNoise(time, duration, volume) {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 1000;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(volume, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(time);
+    }
+
+    playSfx(name) {
+        if (this.sfxMuted) return;
+        this.init();
+        const t = this.ctx.currentTime;
+
+        switch (name) {
+            case 'lever': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, t);
+                osc.frequency.linearRampToValueAtTime(450, t + 0.09);
+                g.gain.setValueAtTime(0.18, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.12);
+                break;
+            }
+            case 'reel_stop': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(540, t);
+                osc.frequency.exponentialRampToValueAtTime(120, t + 0.08);
+                g.gain.setValueAtTime(0.22, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.08);
+                break;
+            }
+            case 'step': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(110, t);
+                osc.frequency.exponentialRampToValueAtTime(40, t + 0.05);
+                g.gain.setValueAtTime(0.08, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.05);
+                break;
+            }
+            case 'attack': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, t);
+                osc.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+                g.gain.setValueAtTime(0.25, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.12);
+                break;
+            }
+            case 'crit': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(620, t);
+                osc.frequency.linearRampToValueAtTime(160, t + 0.22);
+                g.gain.setValueAtTime(0.3, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.22);
+                this.playRetroNoise(t, 0.12, 0.15);
+                break;
+            }
+            case 'coin': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, t); // B5
+                osc.frequency.setValueAtTime(1318.51, t + 0.07); // E6
+                g.gain.setValueAtTime(0.18, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.25);
+                break;
+            }
+            case 'heal': {
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    g.gain.setValueAtTime(0.14, t + idx * 0.07);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.07 + 0.22);
+                    osc.connect(g);
+                    g.connect(this.ctx.destination);
+                    osc.start(t + idx * 0.07);
+                    osc.stop(t + idx * 0.07 + 0.22);
+                });
+                break;
+            }
+            case 'jackpot': {
+                const melody = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+                melody.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    g.gain.setValueAtTime(0.25, t + idx * 0.09);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.09 + 0.4);
+                    osc.connect(g);
+                    g.connect(this.ctx.destination);
+                    osc.start(t + idx * 0.09);
+                    osc.stop(t + idx * 0.09 + 0.4);
+                });
+                break;
+            }
+            case 'hurt': {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, t);
+                osc.frequency.linearRampToValueAtTime(45, t + 0.16);
+                g.gain.setValueAtTime(0.28, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+                osc.connect(g);
+                g.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.16);
+                break;
+            }
+            case 'stairs': {
+                [392, 523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    g.gain.setValueAtTime(0.16, t + i * 0.08);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.28);
+                    osc.connect(g);
+                    g.connect(this.ctx.destination);
+                    osc.start(t + i * 0.08);
+                    osc.stop(t + i * 0.08 + 0.28);
+                });
+                break;
+            }
+        }
+    }
+}
+const audio = new ChiptuneAudioEngine();
+
+/**
+ * =========================================================================
+ * 像素與細緻向量精靈圖繪製器 (Procedural Sprite Renderer)
+ * 徹底拋棄粗糙 emoji，以純粹 Canvas 2D 打造極致復古地牢美術！
+ * =========================================================================
+ */
+class SpriteRenderer {
+    static drawFloorTile(ctx, x, y, size, floorNum) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        let baseCol = '#141926';
+        let strokeCol = '#252f48';
+        let crackCol = '#1d2335';
+
+        if (floorNum >= 6 && floorNum < 10) {
+            baseCol = '#1c1010';
+            strokeCol = '#381c1c';
+            crackCol = '#4a1515';
+        } else if (floorNum === 10) {
+            baseCol = '#191522';
+            strokeCol = '#3d2b59';
+            crackCol = '#56357d';
+        }
+
+        ctx.fillStyle = baseCol;
+        ctx.fillRect(0, 0, size, size);
+
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(1, 1, size - 2, size - 2);
+
+        ctx.fillStyle = crackCol;
+        ctx.fillRect(size * 0.2, size * 0.3, size * 0.25, 2);
+        ctx.fillRect(size * 0.6, size * 0.7, size * 0.2, 2);
+
+        if (floorNum >= 6 && floorNum < 10 && (x + y) % 5 === 0) {
+            ctx.fillStyle = 'rgba(230, 76, 34, 0.45)';
+            ctx.fillRect(size * 0.4, 0, 3, size);
+        }
+
+        ctx.restore();
+    }
+
+    static drawHero(ctx, x, y, size, heroClass, time = 0) {
+        ctx.save();
+        ctx.translate(x + size / 2, y + size / 2);
+
+        const bob = Math.sin(time * 0.006) * 2;
+        ctx.translate(0, bob);
+        const s = size * 0.85;
+
+        switch (heroClass) {
+            case 'warrior': {
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.38, s * 0.32, s * 0.12, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#c0392b';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.2, -s * 0.1);
+                ctx.lineTo(s * 0.2, -s * 0.1);
+                ctx.lineTo(s * 0.26, s * 0.35);
+                ctx.lineTo(-s * 0.26, s * 0.35);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillRect(-s * 0.18, -s * 0.12, s * 0.36, s * 0.38);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.18, s * 0.14, s * 0.36, s * 0.08);
+
+                ctx.fillStyle = '#bdc3c7';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.22, s * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-s * 0.12, -s * 0.24, s * 0.24, s * 0.08);
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(-s * 0.08, -s * 0.22, s * 0.16, s * 0.04);
+
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.18, -s * 0.28);
+                ctx.lineTo(-s * 0.28, -s * 0.42);
+                ctx.lineTo(-s * 0.1, -s * 0.32);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.18, -s * 0.28);
+                ctx.lineTo(s * 0.28, -s * 0.42);
+                ctx.lineTo(s * 0.1, -s * 0.32);
+                ctx.fill();
+
+                ctx.fillStyle = '#2980b9';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.36, -s * 0.15);
+                ctx.lineTo(-s * 0.18, -s * 0.15);
+                ctx.lineTo(-s * 0.22, s * 0.25);
+                ctx.lineTo(-s * 0.27, s * 0.32);
+                ctx.lineTo(-s * 0.32, s * 0.25);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(s * 0.24, -s * 0.38, s * 0.08, s * 0.52);
+                ctx.fillStyle = '#f39c12';
+                ctx.fillRect(s * 0.18, s * 0.04, s * 0.2, s * 0.06);
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(s * 0.25, s * 0.12, s * 0.06, s * 0.06);
+                break;
+            }
+
+            case 'mage': {
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.38, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#4a235a';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.16, -s * 0.1);
+                ctx.lineTo(s * 0.16, -s * 0.1);
+                ctx.lineTo(s * 0.28, s * 0.38);
+                ctx.lineTo(-s * 0.28, s * 0.38);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#1c122c';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.16, s * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(-s * 0.09, -s * 0.18, s * 0.05, s * 0.04);
+                ctx.fillRect(s * 0.04, -s * 0.18, s * 0.05, s * 0.04);
+
+                ctx.fillStyle = '#6c3483';
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.22, s * 0.32, s * 0.08, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.2, -s * 0.22);
+                ctx.lineTo(s * 0.18, -s * 0.22);
+                ctx.lineTo(-s * 0.08, -s * 0.52);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#795548';
+                ctx.fillRect(s * 0.24, -s * 0.35, s * 0.06, s * 0.7);
+                const pulse = Math.sin(time * 0.01) * 2;
+                ctx.fillStyle = '#9b59b6';
+                ctx.beginPath();
+                ctx.arc(s * 0.27, -s * 0.42, s * 0.1 + pulse, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.arc(s * 0.27, -s * 0.42, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 'gambler': {
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.38, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#196f3d';
+                ctx.fillRect(-s * 0.18, -s * 0.1, s * 0.36, s * 0.42);
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.08, -s * 0.1);
+                ctx.lineTo(s * 0.08, -s * 0.1);
+                ctx.lineTo(0, s * 0.1);
+                ctx.fill();
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.05, -s * 0.06, s * 0.1, s * 0.05);
+
+                ctx.fillStyle = '#f5cba7';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.16, s * 0.16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(s * 0.05, -s * 0.17, s * 0.05, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.ellipse(0, -s * 0.22, s * 0.28, s * 0.07, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(-s * 0.16, -s * 0.44, s * 0.32, s * 0.22);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.16, -s * 0.26, s * 0.32, s * 0.05);
+
+                const coinFloat = Math.cos(time * 0.008) * 3;
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(s * 0.26, -s * 0.05 + coinFloat, s * 0.09, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#b7950b';
+                ctx.stroke();
+                break;
+            }
+
+            case 'sinner': {
+                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.38, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#17202a';
+                ctx.fillRect(-s * 0.16, -s * 0.1, s * 0.32, s * 0.42);
+
+                ctx.strokeStyle = '#95a5a6';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.18, -s * 0.05);
+                ctx.lineTo(s * 0.18, s * 0.15);
+                ctx.moveTo(-s * 0.18, s * 0.15);
+                ctx.lineTo(s * 0.18, -s * 0.05);
+                ctx.stroke();
+
+                ctx.fillStyle = '#641e16';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.18, s * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ff0033';
+                ctx.fillRect(-s * 0.09, -s * 0.18, s * 0.05, s * 0.04);
+                ctx.fillRect(s * 0.04, -s * 0.18, s * 0.05, s * 0.04);
+
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(-s * 0.32, -s * 0.15, s * 0.06, s * 0.35);
+                ctx.fillRect(s * 0.26, -s * 0.15, s * 0.06, s * 0.35);
+                break;
+            }
+        }
+
+        ctx.restore();
+    }
+
+    static drawEnemy(ctx, x, y, size, enemyType, time = 0) {
+        ctx.save();
+        ctx.translate(x + size / 2, y + size / 2);
+        const s = size * 0.85;
+
+        switch (enemyType) {
+            case 'slime': {
+                const squish = Math.sin(time * 0.008) * 0.08;
+                ctx.scale(1 + squish, 1 - squish);
+
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.3, s * 0.28);
+                ctx.quadraticCurveTo(-s * 0.35, -s * 0.2, 0, -s * 0.28);
+                ctx.quadraticCurveTo(s * 0.35, -s * 0.2, s * 0.3, s * 0.28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#27ae60';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-s * 0.14, -s * 0.08, s * 0.07, s * 0.09);
+                ctx.fillRect(s * 0.07, -s * 0.08, s * 0.07, s * 0.09);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-s * 0.12, -s * 0.06, s * 0.04, s * 0.06);
+                ctx.fillRect(s * 0.09, -s * 0.06, s * 0.04, s * 0.06);
+
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.beginPath();
+                ctx.arc(-s * 0.12, -s * 0.18, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 'bat': {
+                const flap = Math.sin(time * 0.015) * (s * 0.12);
+                ctx.fillStyle = '#2c3e50';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#34495e';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.1, 0);
+                ctx.lineTo(-s * 0.4, -s * 0.15 + flap);
+                ctx.lineTo(-s * 0.25, s * 0.15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.1, 0);
+                ctx.lineTo(s * 0.4, -s * 0.15 + flap);
+                ctx.lineTo(s * 0.25, s * 0.15);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(-s * 0.08, -s * 0.04, s * 0.04, s * 0.04);
+                ctx.fillRect(s * 0.04, -s * 0.04, s * 0.04, s * 0.04);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-s * 0.05, s * 0.06, s * 0.03, s * 0.05);
+                ctx.fillRect(s * 0.02, s * 0.06, s * 0.03, s * 0.05);
+                break;
+            }
+
+            case 'goblin': {
+                ctx.fillStyle = '#27ae60';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.08, s * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.15, -s * 0.08);
+                ctx.lineTo(-s * 0.35, -s * 0.15);
+                ctx.lineTo(-s * 0.15, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.15, -s * 0.08);
+                ctx.lineTo(s * 0.35, -s * 0.15);
+                ctx.lineTo(s * 0.15, 0);
+                ctx.fill();
+
+                ctx.fillStyle = '#795548';
+                ctx.fillRect(-s * 0.14, s * 0.06, s * 0.28, s * 0.25);
+                ctx.fillStyle = '#bdc3c7';
+                ctx.fillRect(s * 0.16, 0, s * 0.05, s * 0.28);
+                break;
+            }
+
+            case 'skeleton': {
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.12, s * 0.16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-s * 0.09, -s * 0.14, s * 0.06, s * 0.06);
+                ctx.fillRect(s * 0.03, -s * 0.14, s * 0.06, s * 0.06);
+
+                ctx.fillStyle = '#bdc3c7';
+                ctx.fillRect(-s * 0.04, s * 0.04, s * 0.08, s * 0.24);
+                ctx.fillRect(-s * 0.14, s * 0.08, s * 0.28, s * 0.04);
+                ctx.fillRect(-s * 0.12, s * 0.16, s * 0.24, s * 0.04);
+
+                ctx.strokeStyle = '#a04000';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(s * 0.18, 0, s * 0.25, -Math.PI * 0.4, Math.PI * 0.4);
+                ctx.stroke();
+                break;
+            }
+
+            case 'mimic': {
+                ctx.fillStyle = '#6e2c00';
+                ctx.fillRect(-s * 0.26, -s * 0.1, s * 0.52, s * 0.38);
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-s * 0.26, -s * 0.1, s * 0.52, s * 0.38);
+
+                const snap = Math.abs(Math.sin(time * 0.008)) * (s * 0.12);
+                ctx.fillStyle = '#873600';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.28, -s * 0.1);
+                ctx.lineTo(s * 0.28, -s * 0.1);
+                ctx.lineTo(s * 0.26, -s * 0.25 - snap);
+                ctx.lineTo(-s * 0.26, -s * 0.25 - snap);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                for (let i = -0.22; i <= 0.22; i += 0.08) {
+                    ctx.beginPath();
+                    ctx.moveTo(s * i, -s * 0.08);
+                    ctx.lineTo(s * (i + 0.04), -s * 0.02);
+                    ctx.lineTo(s * (i + 0.08), -s * 0.08);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#9b59b6';
+                ctx.beginPath();
+                ctx.arc(0, s * 0.12, s * 0.08, 0, Math.PI);
+                ctx.fill();
+                break;
+            }
+
+            case 'dragon': {
+                ctx.fillStyle = '#922b21';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.05, s * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.12, -s * 0.2);
+                ctx.lineTo(-s * 0.28, -s * 0.38);
+                ctx.lineTo(-s * 0.05, -s * 0.24);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.12, -s * 0.2);
+                ctx.lineTo(s * 0.28, -s * 0.38);
+                ctx.lineTo(s * 0.05, -s * 0.24);
+                ctx.fill();
+
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.1, -s * 0.08, s * 0.06, s * 0.08);
+                ctx.fillRect(s * 0.04, -s * 0.08, s * 0.06, s * 0.08);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(-s * 0.08, -s * 0.08, s * 0.02, s * 0.08);
+                ctx.fillRect(s * 0.06, -s * 0.08, s * 0.02, s * 0.08);
+                break;
+            }
+
+            case 'boss_frog': {
+                ctx.fillStyle = '#1e8449';
+                ctx.beginPath();
+                ctx.ellipse(0, s * 0.05, s * 0.38, s * 0.28, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.15, s * 0.12);
+                ctx.lineTo(s * 0.15, s * 0.12);
+                ctx.lineTo(0, s * 0.2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#27ae60';
+                ctx.beginPath();
+                ctx.arc(-s * 0.18, -s * 0.18, s * 0.12, 0, Math.PI * 2);
+                ctx.arc(s * 0.18, -s * 0.18, s * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(-s * 0.18, -s * 0.18, s * 0.07, 0, Math.PI * 2);
+                ctx.arc(s * 0.18, -s * 0.18, s * 0.07, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.fillRect(-s * 0.23, -s * 0.2, s * 0.1, s * 0.04);
+                ctx.fillRect(s * 0.13, -s * 0.2, s * 0.1, s * 0.04);
+
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.16, -s * 0.26);
+                ctx.lineTo(-s * 0.18, -s * 0.44);
+                ctx.lineTo(-s * 0.08, -s * 0.34);
+                ctx.lineTo(0, -s * 0.46);
+                ctx.lineTo(s * 0.08, -s * 0.34);
+                ctx.lineTo(s * 0.18, -s * 0.44);
+                ctx.lineTo(s * 0.16, -s * 0.26);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#795548';
+                ctx.fillRect(s * 0.08, s * 0.05, s * 0.2, s * 0.05);
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(s * 0.26, s * 0.05, s * 0.04, s * 0.05);
+                break;
+            }
+
+            case 'boss_dragon': {
+                ctx.fillStyle = '#17202a';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.35, -s * 0.2);
+                ctx.lineTo(0, -s * 0.42);
+                ctx.lineTo(s * 0.35, -s * 0.2);
+                ctx.lineTo(s * 0.22, s * 0.35);
+                ctx.lineTo(-s * 0.22, s * 0.35);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#4a235a';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.25, -s * 0.25);
+                ctx.lineTo(-s * 0.48, -s * 0.52);
+                ctx.lineTo(-s * 0.15, -s * 0.35);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(s * 0.25, -s * 0.25);
+                ctx.lineTo(s * 0.48, -s * 0.52);
+                ctx.lineTo(s * 0.15, -s * 0.35);
+                ctx.fill();
+
+                ctx.fillStyle = '#af7ac5';
+                ctx.fillRect(-s * 0.18, -s * 0.12, s * 0.1, s * 0.06);
+                ctx.fillRect(s * 0.08, -s * 0.12, s * 0.1, s * 0.06);
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(-s * 0.14, -s * 0.12, s * 0.04, s * 0.06);
+                ctx.fillRect(s * 0.1, -s * 0.12, s * 0.04, s * 0.06);
+
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.12, s * 0.18);
+                ctx.lineTo(-s * 0.08, s * 0.32);
+                ctx.lineTo(-s * 0.04, s * 0.18);
+                ctx.moveTo(s * 0.04, s * 0.18);
+                ctx.lineTo(s * 0.08, s * 0.32);
+                ctx.lineTo(s * 0.12, s * 0.18);
+                ctx.fill();
+                break;
+            }
+        }
+
+        ctx.restore();
+    }
+
+    static drawItem(ctx, x, y, size, itemType, time = 0) {
+        ctx.save();
+        ctx.translate(x + size / 2, y + size / 2);
+        const s = size * 0.85;
+
+        switch (itemType) {
+            case 'coin': {
+                const spin = Math.sin(time * 0.007);
+                ctx.scale(Math.abs(spin) * 0.7 + 0.3, 1);
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.26, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#b7950b';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#b7950b';
+                ctx.beginPath();
+                ctx.moveTo(0, -s * 0.12);
+                ctx.lineTo(s * 0.12, 0);
+                ctx.lineTo(0, s * 0.12);
+                ctx.lineTo(-s * 0.12, 0);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            }
+
+            case 'pizza': {
+                ctx.fillStyle = '#d35400';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.32, -Math.PI * 0.75, -Math.PI * 0.25);
+                ctx.lineTo(0, s * 0.25);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.28, -Math.PI * 0.72, -Math.PI * 0.28);
+                ctx.lineTo(0, s * 0.22);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#c0392b';
+                ctx.beginPath();
+                ctx.arc(-s * 0.08, -s * 0.08, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(s * 0.08, -s * 0.08, s * 0.05, 0, Math.PI * 2);
+                ctx.arc(0, s * 0.04, s * 0.045, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 'potion_hp':
+            case 'potion_str':
+            case 'potion_int': {
+                let liquidCol = '#e74c3c';
+                if (itemType === 'potion_str') liquidCol = '#e67e22';
+                if (itemType === 'potion_int') liquidCol = '#9b59b6';
+
+                ctx.fillStyle = '#795548';
+                ctx.fillRect(-s * 0.06, -s * 0.3, s * 0.12, s * 0.08);
+
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath();
+                ctx.arc(0, s * 0.05, s * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = liquidCol;
+                ctx.beginPath();
+                ctx.arc(0, s * 0.05, s * 0.18, 0, Math.PI);
+                ctx.fill();
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(-s * 0.08, 0, s * 0.12, Math.PI * 0.8, Math.PI * 1.3);
+                ctx.stroke();
+                break;
+            }
+
+            case 'chest': {
+                ctx.fillStyle = '#566573';
+                ctx.fillRect(-s * 0.25, -s * 0.12, s * 0.5, s * 0.34);
+                ctx.fillStyle = '#d4ac0d';
+                ctx.fillRect(-s * 0.25, -s * 0.12, s * 0.5, s * 0.08);
+                ctx.fillRect(-s * 0.25, s * 0.14, s * 0.5, s * 0.08);
+
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(-s * 0.02, 0, s * 0.04, s * 0.08);
+                break;
+            }
+
+            case 'senzu': {
+                ctx.fillStyle = '#2ecc71';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.14, s * 0.24, Math.PI * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#27ae60';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                break;
+            }
+
+            case 'rock': {
+                ctx.fillStyle = '#5d6d7e';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.28, s * 0.22);
+                ctx.lineTo(-s * 0.32, -s * 0.08);
+                ctx.lineTo(-s * 0.1, -s * 0.28);
+                ctx.lineTo(s * 0.24, -s * 0.2);
+                ctx.lineTo(s * 0.32, s * 0.12);
+                ctx.lineTo(s * 0.1, s * 0.28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -s * 0.15);
+                ctx.lineTo(-s * 0.08, 0);
+                ctx.lineTo(s * 0.1, s * 0.1);
+                ctx.stroke();
+                break;
+            }
+
+            case 'stairs': {
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.6, s * 0.6);
+
+                for (let i = 0; i < 4; i++) {
+                    const stepY = -s * 0.3 + i * (s * 0.15);
+                    const shade = 35 + i * 20;
+                    ctx.fillStyle = `rgb(${shade}, ${shade + 10}, ${shade + 25})`;
+                    ctx.fillRect(-s * 0.26 + i * 2, stepY, s * 0.52 - i * 4, s * 0.14);
+                }
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.28, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 'merchant': {
+                ctx.fillStyle = '#5b2c6f';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.1, s * 0.18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.08, -s * 0.1, s * 0.04, s * 0.04);
+                ctx.fillRect(s * 0.04, -s * 0.1, s * 0.04, s * 0.04);
+                ctx.fillStyle = '#e67e22';
+                ctx.fillRect(s * 0.2, 0, s * 0.08, s * 0.15);
+                break;
+            }
+
+            case 'bell': {
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.05, s * 0.2, Math.PI, 0);
+                ctx.lineTo(s * 0.24, s * 0.18);
+                ctx.lineTo(-s * 0.24, s * 0.18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#b7950b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#e67e22';
+                ctx.beginPath();
+                ctx.arc(0, s * 0.22, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            case 'bar': {
+                ctx.fillStyle = '#d5d8dc';
+                ctx.fillRect(-s * 0.28, -s * 0.16, s * 0.56, s * 0.32);
+                ctx.strokeStyle = '#85929e';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-s * 0.28, -s * 0.16, s * 0.56, s * 0.32);
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 12px Arial Black, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('BAR', 0, 0);
+                break;
+            }
+
+            case 'seven': {
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.22, -s * 0.26);
+                ctx.lineTo(s * 0.22, -s * 0.26);
+                ctx.lineTo(s * 0.02, s * 0.28);
+                ctx.lineTo(-s * 0.08, s * 0.28);
+                ctx.lineTo(s * 0.08, -s * 0.15);
+                ctx.lineTo(-s * 0.22, -s * 0.15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                break;
+            }
+
+            case 'ougi': {
+                ctx.fillStyle = '#f9e79f';
+                ctx.fillRect(-s * 0.22, -s * 0.24, s * 0.44, s * 0.48);
+                ctx.fillStyle = '#c0392b';
+                ctx.fillRect(-s * 0.25, -s * 0.04, s * 0.5, s * 0.08);
+                ctx.fillStyle = '#b7950b';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+
+            // Relic Visuals
+            case 'fork': {
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(-s * 0.04, -s * 0.25, s * 0.08, s * 0.55);
+                ctx.fillRect(-s * 0.15, -s * 0.25, s * 0.3, s * 0.08);
+                ctx.fillRect(-s * 0.15, -s * 0.35, s * 0.08, s * 0.18);
+                ctx.fillRect(s * 0.07, -s * 0.35, s * 0.08, s * 0.18);
+                break;
+            }
+            case 'mage_hat': {
+                ctx.fillStyle = '#8e44ad';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.26, s * 0.2);
+                ctx.lineTo(s * 0.26, s * 0.2);
+                ctx.lineTo(0, -s * 0.36);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, -s * 0.05, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 'maneki_neko': {
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(-s * 0.12, s * 0.1, s * 0.24, s * 0.06);
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, s * 0.13, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 'hammer': {
+                ctx.fillStyle = '#795548';
+                ctx.fillRect(-s * 0.04, -s * 0.1, s * 0.08, s * 0.45);
+                ctx.fillStyle = '#f39c12';
+                ctx.fillRect(-s * 0.22, -s * 0.3, s * 0.44, s * 0.2);
+                break;
+            }
+            case 'berserk': {
+                ctx.fillStyle = '#922b21';
+                ctx.beginPath();
+                ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(-s * 0.12, -s * 0.08, s * 0.08, s * 0.05);
+                ctx.fillRect(s * 0.04, -s * 0.08, s * 0.08, s * 0.05);
+                break;
+            }
+            case 'shield_core': {
+                ctx.fillStyle = '#2980b9';
+                ctx.beginPath();
+                ctx.moveTo(-s * 0.25, -s * 0.25);
+                ctx.lineTo(s * 0.25, -s * 0.25);
+                ctx.lineTo(s * 0.2, s * 0.15);
+                ctx.lineTo(0, s * 0.35);
+                ctx.lineTo(-s * 0.2, s * 0.15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                break;
+            }
+            case 'senzu_bean': {
+                ctx.fillStyle = '#2ecc71';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, s * 0.15, s * 0.25, Math.PI * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#27ae60';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                break;
+            }
+            case 'purge': {
+                ctx.fillStyle = '#e67e22';
+                ctx.beginPath();
+                ctx.moveTo(0, -s * 0.35);
+                ctx.lineTo(s * 0.25, s * 0.25);
+                ctx.lineTo(-s * 0.25, s * 0.25);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.arc(0, s * 0.08, s * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+        }
+
+        ctx.restore();
+    }
+
+    static drawEntity(ctx, x, y, size, key, time = 0) {
+        if (['warrior', 'mage', 'gambler', 'sinner'].includes(key)) {
+            this.drawHero(ctx, x, y, size, key, time);
+        } else if (['slime', 'bat', 'goblin', 'skeleton', 'mimic', 'dragon', 'boss_frog', 'boss_dragon'].includes(key)) {
+            this.drawEnemy(ctx, x, y, size, key, time);
+        } else {
+            this.drawItem(ctx, x, y, size, key, time);
+        }
+    }
+}
+
+/**
+ * =========================================================================
+ * 遊戲常數、英雄、符號與遺物資料庫 (Database)
+ * =========================================================================
+ */
+const GRID_SIZE = 7;
+
+const HERO_DEFS = {
+    warrior: {
+        id: 'warrior',
+        name: '鐵壁戰士',
+        title: '狂食之盾',
+        startGold: 50,
+        maxHp: 130,
+        str: 14,
+        int: 4,
+        armor: 6,
+        luck: 5,
+        skillName: '破陣十字斬',
+        skillDesc: '對十字 4 格敵人造成 220% 力量傷害，並獲取 6 點堅盾',
+        initDeck: [
+            'slime', 'slime', 'goblin', 'goblin', 'bat', 'coin', 'coin', 'coin',
+            'pizza', 'pizza', 'chest', 'bell', 'bar', 'seven', 'ougi', 'rock'
+        ]
+    },
+    mage: {
+        id: 'mage',
+        name: '奧術法師',
+        title: '極光賢者',
+        startGold: 50,
+        maxHp: 85,
+        str: 5,
+        int: 18,
+        armor: 2,
+        luck: 8,
+        skillName: '極光連鎖',
+        skillDesc: '穿透虛空雷擊盤面隨機 3 名敵人，造成 250% 智力傷害',
+        initDeck: [
+            'slime', 'bat', 'skeleton', 'skeleton', 'coin', 'coin', 'potion_int',
+            'potion_hp', 'bell', 'bar', 'seven', 'seven', 'ougi', 'ougi', 'rock', 'chest'
+        ]
+    },
+    gambler: {
+        id: 'gambler',
+        name: '千面賭徒',
+        title: '命運天驕',
+        startGold: 80,
+        maxHp: 95,
+        str: 8,
+        int: 8,
+        armor: 3,
+        luck: 22,
+        skillName: '天命重骰',
+        skillDesc: '將地牢內所有普通怪物強制重骰轉化為黃金金幣或黃金寶箱！',
+        initDeck: [
+            'slime', 'goblin', 'coin', 'coin', 'coin', 'coin', 'chest', 'chest',
+            'bell', 'bell', 'bar', 'bar', 'seven', 'seven', 'ougi', 'rock'
+        ]
+    },
+    sinner: {
+        id: 'sinner',
+        name: '放逐罪人',
+        title: '血誓苦修士',
+        startGold: 50,
+        maxHp: 75,
+        str: 15,
+        int: 9,
+        armor: 0,
+        luck: 14,
+        skillName: '苦痛盛宴',
+        skillDesc: '消耗 8 HP，對周圍全體 8 格引爆劇毒血爆，造成 240% 力量傷害',
+        initDeck: [
+            'slime', 'goblin', 'skeleton', 'mimic', 'coin', 'coin', 'potion_str',
+            'bell', 'bar', 'seven', 'ougi', 'ougi', 'rock', 'chest'
+        ]
+    }
+};
+
+const SYMBOL_DEFS = {
+    slime: { category: 'enemy', name: '史萊姆', hp: 16, atk: 5, exp: 6, gold: 4 },
+    bat: { category: 'enemy', name: '吸血蝙蝠', hp: 22, atk: 7, exp: 8, gold: 5 },
+    goblin: { category: 'enemy', name: '哥布林盜賊', hp: 32, atk: 9, exp: 12, gold: 10 },
+    skeleton: { category: 'enemy', name: '骷髏射手', hp: 45, atk: 13, exp: 16, gold: 12 },
+    mimic: { category: 'enemy', name: '貪婪寶箱怪', hp: 60, atk: 16, exp: 25, gold: 35 },
+    dragon: { category: 'enemy', name: '熔岩幼龍', hp: 95, atk: 22, exp: 40, gold: 45 },
+    boss_frog: { category: 'enemy', name: '賭場巨蛙大亨 (Boss)', hp: 280, atk: 28, exp: 120, gold: 150 },
+    boss_dragon: { category: 'enemy', name: '遠古暗黑魔龍 (Final Boss)', hp: 460, atk: 35, exp: 200, gold: 200 },
+
+    coin: { category: 'item', name: '金幣', value: 8 },
+    pizza: { category: 'item', name: '美味披薩', heal: 25, food: true },
+    potion_hp: { category: 'item', name: '生命藥水', heal: 42 },
+    potion_str: { category: 'item', name: '力量合劑', strBoost: 3 },
+    potion_int: { category: 'item', name: '智慧精華', intBoost: 3 },
+    chest: { category: 'item', name: '黃金寶箱', isChest: true },
+    senzu: { category: 'item', name: '奇蹟仙豆', isSenzu: true },
+
+    bell: { category: 'slot', name: '黃金鈴鐺' },
+    bar: { category: 'slot', name: '白金 BAR' },
+    seven: { category: 'slot', name: '幸運 7' },
+    ougi: { category: 'slot', name: '奧義卷軸' },
+
+    rock: { category: 'obstacle', name: '堅硬岩石', hp: 20 },
+    stairs: { category: 'stairs', name: '下樓樓梯' },
+    merchant: { category: 'merchant', name: '流浪行商' }
+};
+
+const RELIC_POOL = [
+    { id: 'fork', name: '貪吃叉子', iconKey: 'fork', desc: '吃披薩恢復量加倍，且永久獲得 +2 力量' },
+    { id: 'mage_hat', name: '魔導師尖帽', iconKey: 'mage_hat', desc: '施放技能時，智力永久獲得 +2' },
+    { id: 'maneki_neko', name: '招財貓', iconKey: 'maneki_neko', desc: '拉霸轉出 777 與鈴鐺大獎的機率提高 50%' },
+    { id: 'hammer', name: '點金神錘', iconKey: 'hammer', desc: '擊殺敵人時，額外獲取相當於其攻擊力 100% 的金幣' },
+    { id: 'berserk', name: '狂戰假面', iconKey: 'berserk', desc: '生命值低於 40% 時，力量與暴擊率翻倍！' },
+    { id: 'shield_core', name: '泰坦之壁', iconKey: 'shield_core', desc: '進入新樓層時，自動獲取 25 點堅固護甲' },
+    { id: 'senzu_bean', name: '奇蹟仙豆', iconKey: 'senzu_bean', desc: '遭受致命一擊時免死重生，並回滿 50% HP (一次性)' }
+];
+
+/**
+ * =========================================================================
+ * 實體拉霸機控制器 (Mechanical Arcade Slot Controller)
+ * =========================================================================
+ */
+class MechanicalSlotMachine {
+    constructor(game) {
+        this.game = game;
+        this.reels = [
+            { canvas: document.getElementById('reel-canvas-0'), ctx: null, curKey: 'seven', targetKey: 'seven', offset: 0, speed: 0, isRolling: false },
+            { canvas: document.getElementById('reel-canvas-1'), ctx: null, curKey: 'bell', targetKey: 'bell', offset: 0, speed: 0, isRolling: false },
+            { canvas: document.getElementById('reel-canvas-2'), ctx: null, curKey: 'bar', targetKey: 'bar', offset: 0, speed: 0, isRolling: false }
+        ];
+
+        this.reels.forEach(r => r.ctx = r.canvas.getContext('2d'));
+        this.leverEl = document.getElementById('slot-lever');
+        this.chaserBulbs = document.querySelectorAll('.chaser-bulb');
+        this.chaserIndex = 0;
+        this.isSpinning = false;
+
+        this.initLights();
+        this.drawInitialReels();
+    }
+
+    initLights() {
+        setInterval(() => {
+            this.chaserIndex = (this.chaserIndex + 1) % this.chaserBulbs.length;
+            const colors = ['on-gold', 'on-red', 'on-blue', 'on-green'];
+            this.chaserBulbs.forEach((b, i) => {
+                b.className = 'chaser-bulb';
+                if (i === this.chaserIndex || (i + 4) % this.chaserBulbs.length === this.chaserIndex) {
+                    b.classList.add(colors[this.chaserIndex % colors.length]);
+                }
+            });
+        }, 120);
+    }
+
+    drawInitialReels() {
+        this.reels.forEach(r => {
+            r.ctx.clearRect(0, 0, r.canvas.width, r.canvas.height);
+            SpriteRenderer.drawEntity(r.ctx, 0, 0, r.canvas.width, r.curKey, performance.now());
+        });
+    }
+
+    pullLever() {
+        if (this.isSpinning) return;
+        audio.playSfx('lever');
+        this.leverEl.classList.add('pulled');
+        setTimeout(() => {
+            this.leverEl.classList.remove('pulled');
+        }, 260);
+    }
+
+    async spin(results) {
+        if (this.isSpinning) return;
+        this.isSpinning = true;
+        this.pullLever();
+
+        const slotKeys = (this.game.deck && this.game.deck.length > 0)
+            ? [...new Set(this.game.deck)]
+            : ['bell', 'bar', 'seven', 'ougi'];
+
+        this.reels.forEach((r, idx) => {
+            r.targetKey = results[idx];
+            r.isRolling = true;
+            r.speed = 28;
+        });
+
+        const startTime = performance.now();
+
+        return new Promise(resolve => {
+            const animate = (time) => {
+                const elapsed = performance.now() - startTime;
+
+                this.reels.forEach((r, idx) => {
+                    const stopTime = 600 + idx * 550;
+                    if (elapsed >= stopTime && r.isRolling) {
+                        r.isRolling = false;
+                        r.curKey = r.targetKey;
+                        audio.playSfx('reel_stop');
+                        const box = document.getElementById(`reel-box-${idx}`);
+                        box.style.transform = 'translateY(5px)';
+                        setTimeout(() => box.style.transform = 'translateY(-2px)', 80);
+                        setTimeout(() => box.style.transform = 'translateY(0)', 160);
+                    }
+
+                    r.ctx.clearRect(0, 0, r.canvas.width, r.canvas.height);
+
+                    if (r.isRolling) {
+                        const scrollKey = slotKeys[Math.floor((time * 0.02 + idx * 3) % slotKeys.length)];
+                        r.ctx.save();
+                        r.ctx.filter = 'blur(1.5px)';
+                        SpriteRenderer.drawEntity(r.ctx, 0, (time * 0.4) % r.canvas.height - r.canvas.height / 2, r.canvas.width, scrollKey, time);
+                        r.ctx.restore();
+                    } else {
+                        SpriteRenderer.drawEntity(r.ctx, 0, 0, r.canvas.width, r.curKey, time);
+                    }
+                });
+
+                if (this.reels.some(r => r.isRolling)) {
+                    requestAnimationFrame(animate);
+                } else {
+                    this.isSpinning = false;
+                    resolve();
+                }
+            };
+            requestAnimationFrame(animate);
+        });
+    }
+}
+
+/**
+ * =========================================================================
+ * 《拉耙耙》核心主控制器 (Game State Machine & Engine)
+ * =========================================================================
+ */
+class LaPaPaGame {
+    constructor() {
+        this.canvas = document.getElementById('dungeon-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.coinCanvas = document.getElementById('coin-canvas');
+        this.coinCtx = this.coinCanvas.getContext('2d');
+        this.resizeCoinCanvas();
+
+        this.tileSize = this.canvas.width / GRID_SIZE;
+        this.selectedHeroClass = 'warrior';
+        this.floor = 1;
+        this.maxFloor = 10;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.gold = 0;
+        this.kills = 0;
+        this.shakeIntensity = 0;
+
+        this.player = {
+            x: 3, y: 3,
+            hp: 130, maxHp: 130,
+            armor: 6,
+            str: 14, int: 4,
+            luck: 5,
+            sp: 10, maxSp: 10,
+            lv: 1, exp: 0, nextExp: 35,
+            foodBuff: 0
+        };
+
+        this.deck = [];
+        this.relics = [];
+        this.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+        this.floatingTexts = [];
+        this.particles = [];
+        this.celebrationCoins = [];
+
+        this.slotMachine = new MechanicalSlotMachine(this);
+
+        this.initDOM();
+        this.bindEvents();
+        this.renderPreviewAvatars();
+        this.renderLoop();
+    }
+
+    resizeCoinCanvas() {
+        this.coinCanvas.width = window.innerWidth;
+        this.coinCanvas.height = window.innerHeight;
+    }
+
+    initDOM() {
+        this.dom = {
+            hudHeroName: document.getElementById('hud-hero-name'),
+            hudHeroLv: document.getElementById('hud-hero-lv'),
+            hpText: document.getElementById('hp-text'),
+            hpBar: document.getElementById('hp-bar'),
+            armorText: document.getElementById('armor-text'),
+            armorBar: document.getElementById('armor-bar'),
+            goldText: document.getElementById('gold-text'),
+            floorText: document.getElementById('floor-text'),
+            comboText: document.getElementById('combo-text'),
+            cardHeroTitle: document.getElementById('card-hero-title'),
+            statStr: document.getElementById('stat-str'),
+            statInt: document.getElementById('stat-int'),
+            statArm: document.getElementById('stat-arm'),
+            statLuk: document.getElementById('stat-luk'),
+            statCrit: document.getElementById('stat-crit'),
+            statFood: document.getElementById('stat-food'),
+            spIndicator: document.getElementById('sp-indicator'),
+            relicShelf: document.getElementById('relic-shelf'),
+            logBox: document.getElementById('log-box'),
+            btnSpin: document.getElementById('btn-spin-room'),
+            btnSkill: document.getElementById('btn-skill-cast'),
+            modalStart: document.getElementById('modal-start'),
+            modalReward: document.getElementById('modal-reward'),
+            rewardChoices: document.getElementById('reward-choices'),
+            modalShop: document.getElementById('modal-shop'),
+            shopItems: document.getElementById('shop-items-container'),
+            modalDeck: document.getElementById('modal-deck'),
+            deckList: document.getElementById('deck-display-list'),
+            modalRules: document.getElementById('modal-rules'),
+            modalEnd: document.getElementById('modal-end'),
+            endTitle: document.getElementById('end-status-title'),
+            endDesc: document.getElementById('end-status-desc'),
+            endSummary: document.getElementById('end-score-summary'),
+            jackpotCelebration: document.getElementById('jackpot-celebration'),
+            jackpotBanner: document.getElementById('jackpot-banner'),
+            hudAvatarCanvas: document.getElementById('hud-avatar-canvas')
+        };
+    }
+
+    renderPreviewAvatars() {
+        ['warrior', 'mage', 'gambler', 'sinner'].forEach(cls => {
+            const cv = document.getElementById(`preview-${cls}`);
+            if (cv) {
+                const c = cv.getContext('2d');
+                SpriteRenderer.drawHero(c, 0, 0, cv.width, cls, 0);
+            }
+        });
+    }
+
+    bindEvents() {
+        window.addEventListener('resize', () => this.resizeCoinCanvas());
+
+        document.querySelectorAll('.hero-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+                const target = e.currentTarget;
+                target.classList.add('selected');
+                this.selectedHeroClass = target.dataset.class;
+            });
+        });
+
+        document.getElementById('btn-confirm-start').addEventListener('click', () => {
+            audio.init();
+            audio.startBgm();
+            this.startNewGame(this.selectedHeroClass);
+            this.dom.modalStart.classList.remove('active');
+        });
+
+        this.dom.btnSpin.addEventListener('click', () => this.spinAndGenerateFloor(false));
+        document.getElementById('slot-lever').addEventListener('click', () => this.spinAndGenerateFloor(false));
+
+        this.dom.btnSkill.addEventListener('click', () => this.castHeroSkill());
+
+        document.getElementById('btn-open-deck').addEventListener('click', () => this.openDeckModal());
+        document.getElementById('btn-close-deck').addEventListener('click', () => this.dom.modalDeck.classList.remove('active'));
+
+        document.getElementById('btn-open-rules').addEventListener('click', () => this.dom.modalRules.classList.add('active'));
+        document.getElementById('btn-close-rules').addEventListener('click', () => this.dom.modalRules.classList.remove('active'));
+
+        document.getElementById('btn-skip-reward').addEventListener('click', () => {
+            this.dom.modalReward.classList.remove('active');
+            this.advanceFloor();
+        });
+
+        document.getElementById('btn-close-shop').addEventListener('click', () => this.dom.modalShop.classList.remove('active'));
+        document.getElementById('merchant-notice').addEventListener('click', () => this.openShopModal());
+
+        document.getElementById('btn-restart-game').addEventListener('click', () => {
+            this.dom.modalEnd.classList.remove('active');
+            this.dom.modalStart.classList.add('active');
+        });
+
+        document.getElementById('btn-toggle-bgm').addEventListener('click', (e) => {
+            audio.bgmMuted = !audio.bgmMuted;
+            e.currentTarget.textContent = audio.bgmMuted ? '🔇 BGM' : '🎵 BGM';
+        });
+
+        document.getElementById('btn-toggle-sfx').addEventListener('click', (e) => {
+            audio.sfxMuted = !audio.sfxMuted;
+            e.currentTarget.textContent = audio.sfxMuted ? '🔇 音效' : '🔊 音效';
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (this.slotMachine.isSpinning) return;
+            if (document.querySelector('.modal-screen.active')) return;
+
+            switch (e.key) {
+                case 'w': case 'W': case 'ArrowUp':
+                    this.tryMovePlayer(0, -1); break;
+                case 's': case 'S': case 'ArrowDown':
+                    this.tryMovePlayer(0, 1); break;
+                case 'a': case 'A': case 'ArrowLeft':
+                    this.tryMovePlayer(-1, 0); break;
+                case 'd': case 'D': case 'ArrowRight':
+                    this.tryMovePlayer(1, 0); break;
+                case ' ':
+                    this.castHeroSkill(); break;
+            }
+        });
+
+        this.canvas.addEventListener('click', (e) => {
+            if (this.slotMachine.isSpinning) return;
+            if (document.querySelector('.modal-screen.active')) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const clickX = Math.floor((e.clientX - rect.left) / this.tileSize);
+            const clickY = Math.floor((e.clientY - rect.top) / this.tileSize);
+
+            const dx = clickX - this.player.x;
+            const dy = clickY - this.player.y;
+            if (Math.abs(dx) + Math.abs(dy) === 1) {
+                this.tryMovePlayer(dx, dy);
+            }
+        });
+
+        const handleTouchMove = (dx, dy) => {
+            if (this.slotMachine.isSpinning) return;
+            if (document.querySelector('.modal-screen.active')) return;
+            this.tryMovePlayer(dx, dy);
+        };
+        const handleTouchSkill = () => {
+            if (this.slotMachine.isSpinning) return;
+            if (document.querySelector('.modal-screen.active')) return;
+            this.castHeroSkill();
+        };
+
+        document.getElementById('touch-up').addEventListener('click', () => handleTouchMove(0, -1));
+        document.getElementById('touch-down').addEventListener('click', () => handleTouchMove(0, 1));
+        document.getElementById('touch-left').addEventListener('click', () => handleTouchMove(-1, 0));
+        document.getElementById('touch-right').addEventListener('click', () => handleTouchMove(1, 0));
+        document.getElementById('touch-center').addEventListener('click', () => handleTouchSkill());
+    }
+
+    log(msg, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `log-entry log-${type}`;
+        div.textContent = `> ${msg}`;
+        this.dom.logBox.appendChild(div);
+        this.dom.logBox.scrollTop = this.dom.logBox.scrollHeight;
+    }
+
+    shake(amount = 8) {
+        this.shakeIntensity = amount;
+    }
+
+    startNewGame(heroClassId) {
+        const hero = HERO_DEFS[heroClassId] || HERO_DEFS.warrior;
+        this.heroData = hero;
+        this.floor = 1;
+        this.combo = 0;
+        this.gold = hero.startGold || 50;
+        this.kills = 0;
+        this.deck = [...hero.initDeck];
+        this.relics = [];
+
+        this.player = {
+            x: 3, y: 3,
+            hp: hero.maxHp,
+            maxHp: hero.maxHp,
+            armor: hero.armor,
+            str: hero.str,
+            int: hero.int,
+            luck: hero.luck,
+            sp: 10,
+            maxSp: 10,
+            lv: 1,
+            exp: 0,
+            nextExp: 35,
+            foodBuff: 0
+        };
+
+        this.dom.hudHeroName.textContent = hero.name;
+        this.dom.cardHeroTitle.textContent = `${hero.name} (${hero.title})`;
+        this.dom.btnSkill.textContent = `⚡ ${hero.skillName}`;
+        this.dom.logBox.innerHTML = '';
+
+        const avCtx = this.dom.hudAvatarCanvas.getContext('2d');
+        avCtx.clearRect(0, 0, 36, 36);
+        SpriteRenderer.drawHero(avCtx, 0, 0, 36, heroClassId, 0);
+
+        this.log(`【${hero.name}】踏入《拉耙耙》地牢！獲得初始資金 ${this.gold}G！祝你好運連連！`, 'jackpot');
+        this.updateHUD();
+        this.spinAndGenerateFloor(true);
+    }
+
+    updateHUD() {
+        this.dom.hudHeroLv.textContent = `Lv.${this.player.lv}`;
+        this.dom.hpText.textContent = `${Math.max(0, this.player.hp)}/${this.player.maxHp}`;
+        this.dom.hpBar.style.width = `${Math.max(0, (this.player.hp / this.player.maxHp) * 100)}%`;
+
+        this.dom.armorText.textContent = `${this.player.armor}`;
+        this.dom.armorBar.style.width = `${Math.min(100, (this.player.armor / 50) * 100)}%`;
+
+        this.dom.goldText.textContent = `${this.gold}`;
+        this.dom.floorText.textContent = `第 ${this.floor}/10 層`;
+        this.dom.comboText.textContent = `x${this.combo} Combo`;
+
+        this.dom.statStr.textContent = this.player.str + (this.player.foodBuff > 0 ? ` (+${this.player.foodBuff})` : '');
+        this.dom.statInt.textContent = this.player.int;
+        this.dom.statArm.textContent = this.player.armor;
+        this.dom.statLuk.textContent = this.player.luck;
+        const critRate = Math.min(80, Math.floor(this.player.luck * 1.5 + 5));
+        this.dom.statCrit.textContent = `${critRate}%`;
+
+        this.dom.statFood.textContent = this.player.foodBuff > 0 ? `飽腹增傷 (+${this.player.foodBuff})` : '正常';
+        this.dom.statFood.style.color = this.player.foodBuff > 0 ? '#f39c12' : '#2ecc71';
+        this.dom.spIndicator.textContent = `SP: ${this.player.sp}/${this.player.maxSp}`;
+        this.dom.btnSkill.disabled = this.player.sp < 10;
+
+        this.dom.relicShelf.innerHTML = '';
+        this.relics.forEach(r => {
+            const slot = document.createElement('div');
+            slot.className = 'relic-icon-slot';
+            slot.title = `${r.name}: ${r.desc}`;
+            const cv = document.createElement('canvas');
+            cv.width = 24; cv.height = 24;
+            const cctx = cv.getContext('2d');
+            SpriteRenderer.drawEntity(cctx, 0, 0, 24, r.iconKey, 0);
+            slot.appendChild(cv);
+            this.dom.relicShelf.appendChild(slot);
+        });
+    }
+
+    getSpinResults() {
+        const deck = (this.deck && this.deck.length > 0) ? this.deck : ['bell', 'bar', 'seven', 'ougi'];
+        let luckMod = this.player.luck / 100;
+        if (this.relics.some(r => r.id === 'maneki_neko')) luckMod += 0.35;
+
+        let r1 = deck[Math.floor(Math.random() * deck.length)];
+        if (Math.random() < luckMod * 0.35 && deck.includes('seven')) {
+            r1 = 'seven';
+        }
+
+        let r2, r3;
+        if (Math.random() < 0.28 + luckMod * 0.38) {
+            r2 = r1;
+            if (Math.random() < 0.32 + luckMod * 0.42) {
+                r3 = r1;
+            } else {
+                r3 = deck[Math.floor(Math.random() * deck.length)];
+            }
+        } else {
+            r2 = deck[Math.floor(Math.random() * deck.length)];
+            if (Math.random() < 0.25 + luckMod * 0.35) {
+                r3 = r2;
+            } else {
+                r3 = deck[Math.floor(Math.random() * deck.length)];
+            }
+        }
+        return [r1, r2, r3];
+    }
+
+    async spinAndGenerateFloor(isFloorStart = false) {
+        if (this.slotMachine.isSpinning) return;
+
+        if (!isFloorStart) {
+            if (this.gold < 25) {
+                audio.playSfx('hurt');
+                this.shake(4);
+                this.log('金幣不足！手動幸運拉霸需要 25 枚金幣。', 'bad');
+                this.addFloatingText(this.player.x, this.player.y, '金幣不足 25G', '#e74c3c');
+                return;
+            }
+            this.gold -= 25;
+            this.log('🎰 投入 25 金幣拉動命運搖桿！啟動幸運拉霸！', 'info');
+        } else {
+            this.buildDungeonGrid();
+        }
+
+        this.dom.btnSpin.disabled = true;
+        const spinResults = this.getSpinResults();
+        await this.slotMachine.spin(spinResults);
+
+        this.evaluateJackpot(spinResults);
+        this.dom.btnSpin.disabled = false;
+        this.updateHUD();
+    }
+
+    evaluateJackpot(results) {
+        const [a, b, c] = results;
+        if (a === b && b === c) {
+            audio.playSfx('jackpot');
+            this.shake(16);
+            this.triggerCoinCelebration();
+
+            let title = '';
+            if (a === 'seven') {
+                title = '🔥 777 SUPER JACKPOT! 全場神聖雷擊 + HP回滿 + 100金幣！';
+                this.player.hp = this.player.maxHp;
+                this.gold += 100;
+                this.triggerGlobalThunderNuke(140);
+            } else if (a === 'bell') {
+                title = '🔔 3 鈴鐺大獎！60 金幣暴擊與力量永久 +4！';
+                this.gold += 60;
+                this.player.str += 4;
+            } else if (a === 'bar') {
+                title = '🍫 3 BAR 壁壘！獲取 40 點厚重神聖護甲！';
+                this.player.armor += 40;
+            } else if (a === 'ougi') {
+                title = '📜 3 奧義真傳！SP 能量瞬間回滿且力量 +3！';
+                this.player.sp = this.player.maxSp;
+                this.player.str += 3;
+            } else if (a === 'chest') {
+                title = '👑 3 寶箱大滿貫！80 金幣且 SP 奧義瞬間補滿！';
+                this.gold += 80;
+                this.player.sp = this.player.maxSp;
+            } else if (a === 'pizza' || a === 'potion_hp') {
+                title = '🍕 3 靈藥盛宴！生命值全滿且獲得 5 回合飽食增傷！';
+                this.player.hp = this.player.maxHp;
+                this.player.foodBuff = 5;
+            } else if (a === 'potion_str') {
+                title = '💪 3 泰坦合劑！力量永久 +6！';
+                this.player.str += 6;
+            } else if (a === 'potion_int') {
+                title = '🔮 3 賢者精華！智力永久 +6！';
+                this.player.int += 6;
+            } else if (a === 'coin') {
+                title = '💰 3 金幣大噴發！獲得 50 枚金幣！';
+                this.gold += 50;
+            } else {
+                const sName = SYMBOL_DEFS[a]?.name || a;
+                title = `⚔️ 3 【${sName}】連線！獲得懸賞賞金 30 金幣與 10 點護甲！`;
+                this.gold += 30;
+                this.player.armor += 10;
+            }
+
+            this.showJackpotBanner(title);
+            this.log(title, 'jackpot');
+        } else if (a === b || b === c || a === c) {
+            audio.playSfx('coin');
+            this.log('✨ 雙連線獎勵！獲得 15 金幣與 5 點神聖護甲！', 'good');
+            this.gold += 15;
+            this.player.armor += 5;
+        }
+    }
+
+    showJackpotBanner(text) {
+        this.dom.jackpotBanner.textContent = text;
+        this.dom.jackpotCelebration.classList.add('show');
+        setTimeout(() => {
+            this.dom.jackpotCelebration.classList.remove('show');
+        }, 3000);
+    }
+
+    triggerCoinCelebration() {
+        this.celebrationCoins = [];
+        for (let i = 0; i < 65; i++) {
+            this.celebrationCoins.push({
+                x: Math.random() * this.coinCanvas.width,
+                y: -Math.random() * 200,
+                vx: (Math.random() - 0.5) * 6,
+                vy: Math.random() * 5 + 4,
+                rot: Math.random() * Math.PI,
+                vrot: (Math.random() - 0.5) * 0.2,
+                size: Math.random() * 8 + 12
+            });
+        }
+    }
+
+    triggerGlobalThunderNuke(dmg) {
+        if (!this.grid || !this.grid.length) return;
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const cell = this.grid[y]?.[x];
+                if (cell && cell.category === 'enemy') {
+                    cell.hp -= dmg;
+                    this.addFloatingText(x, y, `-${dmg} ⚡`, '#ffd700');
+                    this.addParticles(x, y, '#ffd700', 8);
+                    if (cell.hp <= 0) {
+                        this.killEnemy(cell, x, y, true);
+                    }
+                }
+            }
+        }
+    }
+
+    buildDungeonGrid() {
+        this.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+        this.player.x = 3;
+        this.player.y = 3;
+
+        if (this.floor === this.maxFloor) {
+            this.grid[1][3] = { key: 'boss_dragon', ...SYMBOL_DEFS.boss_dragon };
+            this.log('⚠️ 終極深淵魔王【遠古暗黑魔龍】發出了狂暴的咆哮！斬殺魔龍方可通關！', 'bad');
+        } else if (this.floor % 5 === 0) {
+            this.grid[1][3] = { key: 'boss_frog', ...SYMBOL_DEFS.boss_frog };
+            this.log('⚠️ 樓層首領【賭場巨蛙大亨】坐在金幣山頂阻擋了去路！擊敗牠獲取通往下層的樓梯！', 'bad');
+        }
+
+        if (this.floor === 3 || this.floor === 7) {
+            this.grid[2][2] = { key: 'merchant', ...SYMBOL_DEFS.merchant };
+            this.log('🏕️ 一位神祕的流浪行商在地牢角落點起了油燈！', 'good');
+        }
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                if (x === this.player.x && y === this.player.y) continue;
+                if (this.grid[y][x]) continue;
+
+                if (Math.random() < 0.58) {
+                    const pickedKey = this.deck[Math.floor(Math.random() * this.deck.length)] || 'slime';
+                    const def = SYMBOL_DEFS[pickedKey];
+                    if (def) {
+                        const scale = 1 + (this.floor - 1) * 0.18;
+                        const cellObj = { key: pickedKey, ...def };
+                        if (cellObj.category === 'enemy') {
+                            cellObj.hp = Math.floor(cellObj.hp * scale);
+                            cellObj.maxHp = cellObj.hp;
+                            cellObj.atk = Math.floor(cellObj.atk * scale);
+                        }
+                        this.grid[y][x] = cellObj;
+                    }
+                }
+            }
+        }
+
+        // 保底生成：確保盤面至少有 3 隻怪物與 2 枚金幣，保證開局即可暢快打怪與賺取金幣
+        let enemyCount = 0;
+        let coinCount = 0;
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                if (this.grid[y][x]?.category === 'enemy') enemyCount++;
+                if (this.grid[y][x]?.key === 'coin') coinCount++;
+            }
+        }
+        const findEmpty = () => {
+            const empties = [];
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (x === this.player.x && y === this.player.y) continue;
+                    if (!this.grid[y][x]) empties.push({x, y});
+                }
+            }
+            return empties.sort(() => 0.5 - Math.random());
+        };
+        const empties = findEmpty();
+        while (enemyCount < 3 && empties.length > 0) {
+            const pos = empties.pop();
+            this.grid[pos.y][pos.x] = { key: 'slime', ...SYMBOL_DEFS.slime };
+            enemyCount++;
+        }
+        while (coinCount < 2 && empties.length > 0) {
+            const pos = empties.pop();
+            this.grid[pos.y][pos.x] = { key: 'coin', ...SYMBOL_DEFS.coin };
+            coinCount++;
+        }
+
+        // 放置樓梯：除 5F 巨蛙與 10F 魔龍需擊敗首領後召喚外，其餘樓層正常放置下樓樓梯
+        if (this.floor !== this.maxFloor && this.floor % 5 !== 0) {
+            let stairPlaced = false;
+            const corners = [[0,0], [0,6], [6,0], [6,6], [1,5], [5,1]];
+            for (const [cx, cy] of corners) {
+                if (!this.grid[cy][cx]) {
+                    this.grid[cy][cx] = { key: 'stairs', ...SYMBOL_DEFS.stairs };
+                    stairPlaced = true;
+                    break;
+                }
+            }
+            if (!stairPlaced) {
+                this.grid[0][0] = { key: 'stairs', ...SYMBOL_DEFS.stairs };
+            }
+        }
+
+        if (this.relics.some(r => r.id === 'shield_core')) {
+            this.player.armor += 25;
+        }
+
+        if (this.floor === this.maxFloor) {
+            this.log(`第 ${this.floor} 層【遠古深淵】！擊殺暗黑魔龍以獲得最終勝利！`, 'jackpot');
+        } else if (this.floor % 5 === 0) {
+            this.log(`第 ${this.floor} 層【巨蛙賭場】！擊敗巨蛙大亨開啟下層樓梯！`, 'bad');
+        } else {
+            this.log(`第 ${this.floor} 層地牢生成完畢！尋覓樓梯突破深淵。`, 'info');
+        }
+    }
+
+    tryMovePlayer(dx, dy) {
+        const nx = this.player.x + dx;
+        const ny = this.player.y + dy;
+
+        if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
+
+        const target = this.grid[ny][nx];
+
+        if (!target) {
+            this.player.x = nx;
+            this.player.y = ny;
+            audio.playSfx('step');
+            this.onStepEnd();
+            return;
+        }
+
+        if (target.category === 'obstacle') {
+            audio.playSfx('attack');
+            target.hp -= this.player.str;
+            this.addFloatingText(nx, ny, `-${this.player.str}`, '#bdc3c7');
+            this.shake(3);
+            if (target.hp <= 0) {
+                this.grid[ny][nx] = null;
+                this.log('猛力一擊粉碎了堅硬岩石！', 'info');
+            }
+            return;
+        }
+
+        if (target.category === 'stairs') {
+            audio.playSfx('stairs');
+            this.onReachStairs();
+            return;
+        }
+
+        if (target.category === 'merchant') {
+            this.openShopModal();
+            return;
+        }
+
+        if (target.category === 'item') {
+            this.collectItem(target, nx, ny);
+            this.grid[ny][nx] = null;
+            this.player.x = nx;
+            this.player.y = ny;
+            this.onStepEnd();
+            return;
+        }
+
+        if (target.category === 'slot') {
+            audio.playSfx('coin');
+            this.addFloatingText(nx, ny, `+SP / Gold!`, '#f1c40f');
+            this.player.sp = Math.min(this.player.maxSp, this.player.sp + 3);
+            this.gold += 12;
+            this.grid[ny][nx] = null;
+            this.player.x = nx;
+            this.player.y = ny;
+            this.onStepEnd();
+            return;
+        }
+
+        if (target.category === 'enemy') {
+            this.attackEnemy(target, nx, ny);
+        }
+    }
+
+    collectItem(item, x, y) {
+        if (item.value) {
+            audio.playSfx('coin');
+            this.gold += item.value;
+            this.addFloatingText(x, y, `+${item.value} 💰`, '#f1c40f');
+            this.log(`拾取了 ${item.name}，金幣 +${item.value}！`, 'good');
+        } else if (item.heal) {
+            audio.playSfx('heal');
+            let healAmount = item.heal;
+            if (item.food && this.relics.some(r => r.id === 'fork')) {
+                healAmount *= 2;
+                this.player.str += 2;
+                this.log('【貪吃叉子】增幅！食物回復翻倍且力量永久 +2！', 'jackpot');
+            }
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmount);
+            this.addFloatingText(x, y, `+${healAmount} HP`, '#2ecc71');
+            if (item.food) {
+                this.player.foodBuff = 4;
+                this.log(`品嚐了美味披薩，獲得飽食增傷狀態！`, 'good');
+            }
+        } else if (item.isChest) {
+            audio.playSfx('coin');
+            const g = 30 + Math.floor(Math.random() * 35);
+            this.gold += g;
+            this.player.sp = this.player.maxSp;
+            this.addFloatingText(x, y, `寶箱！+${g} 💰`, '#ffd700');
+            this.log(`開啟黃金寶箱！獲得 ${g} 金幣且奧義 SP 補滿！`, 'jackpot');
+        } else if (item.strBoost) {
+            audio.playSfx('heal');
+            this.player.str += item.strBoost;
+            this.addFloatingText(x, y, `+${item.strBoost} STR`, '#e67e22');
+            this.log(`飲用力量合劑，永久力量 +${item.strBoost}！`, 'good');
+        } else if (item.intBoost) {
+            audio.playSfx('heal');
+            this.player.int += item.intBoost;
+            this.addFloatingText(x, y, `+${item.intBoost} INT`, '#9b59b6');
+            this.log(`吸納智慧精華，永久智力 +${item.intBoost}！`, 'good');
+        } else if (item.isSenzu) {
+            audio.playSfx('jackpot');
+            if (!this.relics.some(r => r.id === 'senzu_bean')) {
+                const senzuRelic = RELIC_POOL.find(r => r.id === 'senzu_bean');
+                if (senzuRelic) this.relics.push(senzuRelic);
+                this.addFloatingText(x, y, '獲得【奇蹟仙豆】!', '#2ecc71');
+                this.log('拾取了傳奇之物【奇蹟仙豆】！獲得一次致命傷免死重生庇護！', 'jackpot');
+            } else {
+                const healAmt = Math.floor(this.player.maxHp * 0.5);
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmt);
+                this.addFloatingText(x, y, `仙豆滋養 +${healAmt} HP`, '#2ecc71');
+                this.log(`仙豆飽滿！生命值恢復了 ${healAmt} 點！`, 'good');
+            }
+        }
+    }
+
+    attackEnemy(enemy, x, y) {
+        let isCrit = Math.random() < (this.player.luck * 0.015 + 0.05);
+        let comboBonus = Math.floor(this.combo * 0.8);
+        let dmg = this.player.str + this.player.foodBuff + comboBonus;
+
+        if (this.relics.some(r => r.id === 'berserk') && (this.player.hp / this.player.maxHp) <= 0.4) {
+            dmg *= 2;
+            isCrit = true;
+        }
+
+        if (isCrit) {
+            dmg = Math.floor(dmg * 2.2);
+            audio.playSfx('crit');
+            this.shake(9);
+            this.addFloatingText(x, y, `CRIT! -${dmg}`, '#f39c12');
+        } else {
+            audio.playSfx('attack');
+            this.shake(4);
+            this.addFloatingText(x, y, `-${dmg}`, '#e74c3c');
+        }
+
+        this.addParticles(x, y, '#e74c3c', 8);
+        enemy.hp -= dmg;
+
+        if (enemy.hp <= 0) {
+            this.log(`斬殺【${enemy.name}】！獲得 ${enemy.gold} 金幣，連擊 Combo x${this.combo + 1}！`, 'good');
+            this.killEnemy(enemy, x, y, false);
+            if (enemy.key !== 'boss_frog' && enemy.key !== 'boss_dragon') {
+                this.player.x = x;
+                this.player.y = y;
+            }
+            this.onStepEnd();
+            return;
+        }
+
+        let enemyDmg = enemy.atk;
+        if (this.player.armor > 0) {
+            if (this.player.armor >= enemyDmg) {
+                this.player.armor -= enemyDmg;
+                this.addFloatingText(this.player.x, this.player.y, '格擋防禦!', '#3498db');
+                enemyDmg = 0;
+            } else {
+                enemyDmg -= this.player.armor;
+                this.player.armor = 0;
+            }
+        }
+
+        if (enemyDmg > 0) {
+            this.player.hp -= enemyDmg;
+            this.combo = 0;
+            audio.playSfx('hurt');
+            this.shake(7);
+            this.addFloatingText(this.player.x, this.player.y, `-${enemyDmg} HP`, '#e74c3c');
+            this.log(`受到【${enemy.name}】反擊，受到 ${enemyDmg} 點傷害！`, 'bad');
+
+            if (this.player.hp <= 0) {
+                this.handlePlayerDeath();
+            }
+        }
+
+        this.updateHUD();
+    }
+
+    killEnemy(enemy, x, y, isSkill = false) {
+        this.combo++;
+        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+        this.kills++;
+
+        let goldGain = enemy.gold || 5;
+        if (this.relics.some(r => r.id === 'hammer')) {
+            goldGain += (enemy.atk || 5);
+        }
+        this.gold += goldGain;
+        this.player.sp = Math.min(this.player.maxSp, this.player.sp + (isSkill ? 1 : 2));
+        this.gainExp(enemy.exp || 8);
+        this.grid[y][x] = null;
+
+        if (enemy.key === 'boss_dragon') {
+            audio.playSfx('jackpot');
+            this.shake(20);
+            this.triggerCoinCelebration();
+            this.log('👑 傳奇誕生！你斬殺了【遠古暗黑魔龍】，征服了拉耙耙地牢！', 'jackpot');
+            setTimeout(() => this.endGame(true), 1200);
+            return;
+        } else if (enemy.key === 'boss_frog') {
+            audio.playSfx('jackpot');
+            this.shake(15);
+            this.triggerCoinCelebration();
+            this.log('🎉 擊敗【賭場巨蛙大亨】！通往下層的神秘樓梯顯現！', 'jackpot');
+            this.grid[y][x] = { key: 'stairs', ...SYMBOL_DEFS.stairs };
+            return;
+        }
+    }
+
+    onStepEnd() {
+        if (this.player.foodBuff > 0) {
+            this.player.foodBuff--;
+        }
+        this.updateHUD();
+    }
+
+    gainExp(amount) {
+        this.player.exp += amount;
+        if (this.player.exp >= this.player.nextExp) {
+            this.player.lv++;
+            this.player.exp -= this.player.nextExp;
+            this.player.nextExp = Math.floor(this.player.nextExp * 1.5);
+            this.player.maxHp += 15;
+            this.player.hp = this.player.maxHp;
+            this.player.str += 2;
+            this.player.int += 2;
+            audio.playSfx('jackpot');
+            this.log(`🎉 角色升級！達到 Lv.${this.player.lv}！全屬性提振且生命值全滿！`, 'jackpot');
+        }
+    }
+
+    castHeroSkill() {
+        if (this.player.sp < 10 || this.slotMachine.isSpinning) return;
+        this.player.sp = 0;
+        audio.playSfx('jackpot');
+        this.shake(12);
+
+        if (this.relics.some(r => r.id === 'mage_hat')) {
+            this.player.int += 2;
+        }
+
+        if (this.selectedHeroClass === 'warrior') {
+            const dirs = [[0,-1], [0,1], [-1,0], [1,0]];
+            let hit = 0;
+            dirs.forEach(([dx, dy]) => {
+                const nx = this.player.x + dx;
+                const ny = this.player.y + dy;
+                if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                    const target = this.grid[ny][nx];
+                    if (target && target.category === 'enemy') {
+                        const dmg = Math.floor(this.player.str * 2.2);
+                        target.hp -= dmg;
+                        this.addFloatingText(nx, ny, `十字斬! -${dmg}`, '#f1c40f');
+                        this.addParticles(nx, ny, '#e67e22', 12);
+                        hit++;
+                        if (target.hp <= 0) {
+                            this.killEnemy(target, nx, ny, true);
+                        }
+                    }
+                }
+            });
+            this.player.armor += 6;
+            this.log(`戰士奧義【破陣十字斬】爆發！劈中 ${hit} 名敵人並獲取 6 點堅盾！`, 'jackpot');
+        } else if (this.selectedHeroClass === 'mage') {
+            const enemies = [];
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (this.grid[y][x] && this.grid[y][x].category === 'enemy') {
+                        enemies.push({ x, y, enemy: this.grid[y][x] });
+                    }
+                }
+            }
+            const hits = enemies.sort(() => 0.5 - Math.random()).slice(0, 3);
+            hits.forEach(({ x, y, enemy }) => {
+                const dmg = Math.floor(this.player.int * 2.5);
+                enemy.hp -= dmg;
+                this.addFloatingText(x, y, `極光雷擊! -${dmg}`, '#9b59b6');
+                this.addParticles(x, y, '#9b59b6', 15);
+                if (enemy.hp <= 0) {
+                    this.killEnemy(enemy, x, y, true);
+                }
+            });
+            this.log(`法師奧義【極光連鎖】穿透虛空！雷擊貫穿 ${hits.length} 名敵人！`, 'jackpot');
+        } else if (this.selectedHeroClass === 'gambler') {
+            let turned = 0;
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const target = this.grid[y][x];
+                    if (target && target.category === 'enemy' && !target.name.includes('Boss')) {
+                        const newKey = Math.random() < 0.6 ? 'coin' : 'chest';
+                        this.grid[y][x] = { key: newKey, ...SYMBOL_DEFS[newKey] };
+                        this.addFloatingText(x, y, '天命轉化!', '#f1c40f');
+                        turned++;
+                    }
+                }
+            }
+            this.log(`賭徒奧義【天命重骰】發動！將 ${turned} 隻怪物化為滾滾黃金寶藏！`, 'jackpot');
+        } else if (this.selectedHeroClass === 'sinner') {
+            this.player.hp = Math.max(1, this.player.hp - 8);
+            for (let y = Math.max(0, this.player.y - 1); y <= Math.min(GRID_SIZE - 1, this.player.y + 1); y++) {
+                for (let x = Math.max(0, this.player.x - 1); x <= Math.min(GRID_SIZE - 1, this.player.x + 1); x++) {
+                    const target = this.grid[y][x];
+                    if (target && target.category === 'enemy') {
+                        const dmg = Math.floor(this.player.str * 2.4);
+                        target.hp -= dmg;
+                        this.addFloatingText(x, y, `毒爆! -${dmg}`, '#27ae60');
+                        if (target.hp <= 0) {
+                            this.killEnemy(target, x, y, true);
+                        }
+                    }
+                }
+            }
+            this.log('罪人奧義【苦痛盛宴】引爆劇毒血爆！撕裂周遭所有敵人！', 'jackpot');
+        }
+
+        this.updateHUD();
+    }
+
+    onReachStairs() {
+        if (this.floor >= this.maxFloor) {
+            this.endGame(true);
+            return;
+        }
+        this.openRewardModal();
+    }
+
+    openRewardModal() {
+        this.dom.rewardChoices.innerHTML = '';
+        const candidateSymbols = ['pizza', 'potion_hp', 'potion_str', 'seven', 'bell', 'bar', 'mimic', 'dragon'];
+        const candidateRelics = RELIC_POOL.filter(r => !this.relics.some(owned => owned.id === r.id));
+
+        const choices = [];
+
+        // Choice 1: New potent symbol
+        const symKey = candidateSymbols[Math.floor(Math.random() * candidateSymbols.length)];
+        const sym = SYMBOL_DEFS[symKey];
+        choices.push({
+            type: 'symbol',
+            key: symKey,
+            iconKey: symKey,
+            title: `獲得符號：${sym.name}`,
+            desc: `加入 2 個【${sym.name}】至拉霸牌庫，提升轉出率`
+        });
+
+        // Choice 2: Deck Purge
+        choices.push({
+            type: 'purge',
+            key: 'purge',
+            iconKey: 'purge',
+            title: '牌庫提純 (去蕪存菁)',
+            desc: '永久移除 2 個弱小或雜質符號 (史萊姆/岩石)，大幅提高大獎機率'
+        });
+
+        // Choice 3: Relic or ancient legacy if all relics owned
+        if (candidateRelics.length > 0) {
+            const rel = candidateRelics[Math.floor(Math.random() * candidateRelics.length)];
+            choices.push({
+                type: 'relic',
+                relic: rel,
+                iconKey: rel.iconKey,
+                title: `傳奇遺物：${rel.name}`,
+                desc: rel.desc
+            });
+        } else {
+            choices.push({
+                type: 'stat_boost',
+                iconKey: 'chest',
+                title: '遠古英雄傳承 (遺物已集齊)',
+                desc: '全屬性 (力量/智力/幸運) 永久 +2，並恢復 50 點生命值'
+            });
+        }
+
+        choices.forEach(ch => {
+            const card = document.createElement('div');
+            card.className = 'reward-card';
+
+            const cv = document.createElement('canvas');
+            cv.className = 'reward-icon-canvas';
+            cv.width = 52;
+            cv.height = 52;
+            const cctx = cv.getContext('2d');
+            SpriteRenderer.drawEntity(cctx, 0, 0, 52, ch.iconKey, 0);
+            card.appendChild(cv);
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'reward-title';
+            titleEl.textContent = ch.title;
+            card.appendChild(titleEl);
+
+            const descEl = document.createElement('div');
+            descEl.className = 'reward-desc';
+            descEl.textContent = ch.desc;
+            card.appendChild(descEl);
+
+            card.addEventListener('click', () => {
+                this.claimReward(ch);
+                this.dom.modalReward.classList.remove('active');
+                this.advanceFloor();
+            });
+            this.dom.rewardChoices.appendChild(card);
+        });
+
+        this.dom.modalReward.classList.add('active');
+    }
+
+    claimReward(choice) {
+        if (choice.type === 'symbol') {
+            this.deck.push(choice.key, choice.key);
+            this.log(`牌庫擴充：已加入 2 個【${SYMBOL_DEFS[choice.key].name}】！`, 'good');
+        } else if (choice.type === 'purge') {
+            let purged = 0;
+            for (let i = 0; i < 2; i++) {
+                const idx = this.deck.findIndex(k => k === 'slime' || k === 'rock' || k === 'bat');
+                if (idx !== -1 && this.deck.length > 5) {
+                    this.deck.splice(idx, 1);
+                    purged++;
+                }
+            }
+            if (purged > 0) {
+                this.log(`牌庫提純成功！抹除了 ${purged} 個冗餘雜質符號！`, 'jackpot');
+            } else {
+                this.gold += 30;
+                this.log('牌庫已達極致純度！轉換為 30 金幣獎勵！', 'good');
+            }
+        } else if (choice.type === 'relic') {
+            this.relics.push(choice.relic);
+            this.log(`獲得傳奇遺物：【${choice.relic.name}】！`, 'jackpot');
+        } else if (choice.type === 'stat_boost') {
+            this.player.str += 2;
+            this.player.int += 2;
+            this.player.luck += 2;
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 50);
+            this.log('遠古英雄傳承覺醒！全屬性提升且生命恢復！', 'jackpot');
+        }
+    }
+
+    advanceFloor() {
+        this.floor++;
+        this.log(`>>> 步入第 ${this.floor} 層深淵地牢！`, 'info');
+        this.spinAndGenerateFloor(true);
+    }
+
+    openShopModal() {
+        this.dom.shopItems.innerHTML = '';
+
+        const candidateRelics = RELIC_POOL.filter(r => !this.relics.some(owned => owned.id === r.id));
+        const allRelicsOwned = candidateRelics.length === 0;
+        const purgeableCount = this.deck.filter(k => k === 'slime' || k === 'rock' || k === 'bat').length;
+
+        const goods = [
+            { id: 'heal_potion', name: '秘制生命藥水', cost: 25, icon: 'potion_hp', desc: '恢復 45 點 HP', action: () => { this.player.hp = Math.min(this.player.maxHp, this.player.hp + 45); } },
+            { id: 'purge_service', name: purgeableCount > 0 ? '黑市牌庫提純' : '黑市精華洗練', cost: 30, icon: 'purge', desc: purgeableCount > 0 ? '抹除牌庫中 2 個雜魚符號' : '牌庫無雜魚，洗練獲得 +15 最大生命值', action: () => {
+                if (purgeableCount > 0) {
+                    let purged = 0;
+                    for (let i = 0; i < 2; i++) {
+                        const idx = this.deck.findIndex(k => k === 'slime' || k === 'rock' || k === 'bat');
+                        if (idx !== -1 && this.deck.length > 5) {
+                            this.deck.splice(idx, 1);
+                            purged++;
+                        }
+                    }
+                    this.log(`黑市提純完成：抹除 ${purged} 個雜質符號！`, 'good');
+                } else {
+                    this.player.maxHp += 15;
+                    this.player.hp += 15;
+                    this.log('黑市精華洗練完成：最大生命值 +15！', 'good');
+                }
+            }},
+            { id: 'add_seven', name: '灌鉛幸運 7 符號', cost: 40, icon: 'seven', desc: '牌庫加入 2 個幸運 7', action: () => { this.deck.push('seven', 'seven'); } },
+            { id: 'add_relic', name: allRelicsOwned ? '黑市遺物精華 (盲盒已售罄)' : '黑市遺物盲盒', cost: 55, icon: 'chest', desc: allRelicsOwned ? '全傳奇遺物已擁有，吸收精華獲全屬性+2與生命全滿' : '隨機獲取一件未擁有傳奇遺物', action: () => {
+                if (candidateRelics.length > 0) {
+                    const r = candidateRelics[Math.floor(Math.random() * candidateRelics.length)];
+                    this.relics.push(r);
+                    this.log(`黑市盲盒開啟：獲得【${r.name}】！`, 'jackpot');
+                } else {
+                    this.player.str += 2;
+                    this.player.int += 2;
+                    this.player.hp = this.player.maxHp;
+                    this.log('黑市遺物精華吸收！力量+2、智力+2且生命全滿！', 'jackpot');
+                }
+            }}
+        ];
+
+        goods.forEach(item => {
+            const card = document.createElement('div');
+            card.className = `shop-item-card ${this.gold < item.cost ? 'disabled' : ''}`;
+
+            const cv = document.createElement('canvas');
+            cv.width = 44; cv.height = 44;
+            const cctx = cv.getContext('2d');
+            SpriteRenderer.drawEntity(cctx, 0, 0, 44, item.icon, 0);
+            card.appendChild(cv);
+
+            const infoDiv = document.createElement('div');
+            infoDiv.style.flex = '1';
+            infoDiv.innerHTML = `
+                <div style="font-weight:bold; color:var(--gold-bright);">${item.name}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${item.desc}</div>
+                <div style="font-size:0.82rem; color:#f1c40f; margin-top:2px;">💰 價格：${item.cost} 金幣</div>
+            `;
+            card.appendChild(infoDiv);
+
+            card.addEventListener('click', () => {
+                if (this.gold >= item.cost) {
+                    this.gold -= item.cost;
+                    audio.playSfx('coin');
+                    item.action();
+                    this.updateHUD();
+                    this.log(`行商交易成功：購買了【${item.name}】！`, 'good');
+                    this.openShopModal();
+                } else {
+                    audio.playSfx('hurt');
+                    this.shake(4);
+                    this.log(`金幣不足！購買【${item.name}】需要 ${item.cost} 金幣。`, 'bad');
+                }
+            });
+
+            this.dom.shopItems.appendChild(card);
+        });
+
+        this.dom.modalShop.classList.add('active');
+    }
+
+    openDeckModal() {
+        this.dom.deckList.innerHTML = '';
+        const counts = {};
+        this.deck.forEach(k => counts[k] = (counts[k] || 0) + 1);
+
+        for (const [key, count] of Object.entries(counts)) {
+            const def = SYMBOL_DEFS[key];
+            if (!def) continue;
+            const total = Math.max(1, this.deck.length);
+            const rate = ((count / total) * 100).toFixed(1);
+
+            const pill = document.createElement('div');
+            pill.className = 'deck-pill';
+
+            const cv = document.createElement('canvas');
+            cv.width = 24; cv.height = 24;
+            const cctx = cv.getContext('2d');
+            SpriteRenderer.drawEntity(cctx, 0, 0, 24, key, 0);
+            pill.appendChild(cv);
+
+            const textSpan = document.createElement('span');
+            textSpan.innerHTML = `<b>${def.name}</b> <span>x${count} (${rate}%)</span>`;
+            pill.appendChild(textSpan);
+
+            this.dom.deckList.appendChild(pill);
+        }
+        this.dom.modalDeck.classList.add('active');
+    }
+
+    handlePlayerDeath() {
+        const senzuIdx = this.relics.findIndex(r => r.id === 'senzu_bean');
+        if (senzuIdx !== -1) {
+            this.relics.splice(senzuIdx, 1);
+            this.player.hp = Math.floor(this.player.maxHp * 0.5);
+            audio.playSfx('jackpot');
+            this.log('✨ 【奇蹟仙豆】綻放光芒！抵擋了致命傷並重生復活！', 'jackpot');
+            this.updateHUD();
+            return;
+        }
+        this.endGame(false);
+    }
+
+    endGame(isVictory) {
+        this.dom.modalEnd.classList.add('active');
+        if (isVictory) {
+            audio.playSfx('jackpot');
+            this.dom.endTitle.textContent = '👑 傳奇征服者 (VICTORY)';
+            this.dom.endTitle.style.color = '#f1c40f';
+            this.dom.endDesc.textContent = `太不可思議了！你成功斬殺遠古暗黑魔龍，徹底征服了全部 10 層《拉耙耙》地牢！`;
+        } else {
+            this.dom.endTitle.textContent = '💀 冒險終結 (GAME OVER)';
+            this.dom.endTitle.style.color = '#e74c3c';
+            this.dom.endDesc.textContent = `你在第 ${this.floor} 層力竭倒下了...`;
+        }
+
+        const maxCombo = this.maxCombo || this.combo || 0;
+        const score = this.gold * 2 + this.kills * 15 + this.floor * 100 + maxCombo * 20;
+        this.dom.endSummary.textContent = `結算：通關至第 ${this.floor} 層 | 擊殺：${this.kills} 體 | 金幣：${this.gold} | 最高連擊：${maxCombo} Combo | 冒險總積分：${score} 分`;
+
+        const best = localStorage.getItem('lapapa_high_score') || 0;
+        if (score > best) {
+            localStorage.setItem('lapapa_high_score', score);
+            this.dom.endSummary.textContent += ` (🌟 刷新最高紀錄！)`;
+        }
+    }
+
+    addFloatingText(x, y, text, color = '#f1c40f') {
+        this.floatingTexts.push({
+            x: (x + 0.5) * this.tileSize,
+            y: (y + 0.3) * this.tileSize,
+            text,
+            color,
+            life: 1.0
+        });
+    }
+
+    addParticles(x, y, color = '#f39c12', count = 8) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x: (x + 0.5) * this.tileSize,
+                y: (y + 0.5) * this.tileSize,
+                vx: (Math.random() - 0.5) * 5,
+                vy: (Math.random() - 0.5) * 5,
+                size: Math.random() * 4 + 2,
+                color,
+                life: 1.0
+            });
+        }
+    }
+
+    renderLoop() {
+        this.render();
+        requestAnimationFrame(() => this.renderLoop());
+    }
+
+    render() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const t = this.tileSize;
+        const now = performance.now();
+
+        ctx.save();
+        if (this.shakeIntensity > 0) {
+            const rx = (Math.random() - 0.5) * this.shakeIntensity;
+            const ry = (Math.random() - 0.5) * this.shakeIntensity;
+            ctx.translate(rx, ry);
+            this.shakeIntensity *= 0.88;
+            if (this.shakeIntensity < 0.5) this.shakeIntensity = 0;
+        }
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const px = x * t;
+                const py = y * t;
+
+                SpriteRenderer.drawFloorTile(ctx, px, py, t, this.floor);
+
+                const cell = this.grid[y]?.[x];
+                if (cell) {
+                    if (cell.category === 'enemy') {
+                        SpriteRenderer.drawEnemy(ctx, px, py, t, cell.key, now);
+
+                        const hpPct = Math.max(0, cell.hp / (cell.maxHp || cell.hp));
+                        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                        ctx.fillRect(px + 6, py + t - 9, t - 12, 5);
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.fillRect(px + 6, py + t - 9, (t - 12) * hpPct, 5);
+
+                        ctx.fillStyle = '#f1c40f';
+                        ctx.font = 'bold 10px monospace';
+                        ctx.fillText(`⚔${cell.atk}`, px + t / 2, py + 12);
+                    } else {
+                        SpriteRenderer.drawItem(ctx, px, py, t, cell.key, now);
+                    }
+                }
+            }
+        }
+
+        const torchGlow = Math.sin(now * 0.007) * 8;
+        const ppx = this.player.x * t;
+        const ppy = this.player.y * t;
+
+        const auraGrad = ctx.createRadialGradient(ppx + t/2, ppy + t/2, 4, ppx + t/2, ppy + t/2, t * 0.75 + torchGlow);
+        auraGrad.addColorStop(0, 'rgba(245, 179, 36, 0.4)');
+        auraGrad.addColorStop(1, 'rgba(245, 179, 36, 0)');
+        ctx.fillStyle = auraGrad;
+        ctx.fillRect(ppx - 20, ppy - 20, t + 40, t + 40);
+
+        SpriteRenderer.drawHero(ctx, ppx, ppy, t, this.selectedHeroClass, now);
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.035;
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = this.floatingTexts[i];
+            ft.y -= 0.9;
+            ft.life -= 0.025;
+            if (ft.life <= 0) {
+                this.floatingTexts.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = ft.life;
+            ctx.font = 'bold 15px "Segoe UI", sans-serif';
+            ctx.fillStyle = ft.color;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 4;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+
+        const vig = ctx.createRadialGradient(w/2, h/2, w * 0.35, w/2, h/2, w * 0.65);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, 'rgba(4,6,10,0.65)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.restore();
+
+        if (this.celebrationCoins.length > 0) {
+            const cctx = this.coinCtx;
+            cctx.clearRect(0, 0, this.coinCanvas.width, this.coinCanvas.height);
+            for (let i = this.celebrationCoins.length - 1; i >= 0; i--) {
+                const coin = this.celebrationCoins[i];
+                coin.x += coin.vx;
+                coin.y += coin.vy;
+                coin.vy += 0.25;
+                coin.rot += coin.vrot;
+
+                cctx.save();
+                cctx.translate(coin.x, coin.y);
+                cctx.rotate(coin.rot);
+                SpriteRenderer.drawEntity(cctx, -coin.size, -coin.size, coin.size * 2, 'coin', now);
+                cctx.restore();
+
+                if (coin.y > this.coinCanvas.height) {
+                    this.celebrationCoins.splice(i, 1);
+                }
+            }
+        }
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    window.game = new LaPaPaGame();
+});
+</script>
+</body>
+</html>
